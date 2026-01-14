@@ -4,9 +4,22 @@
 
 - `settings.json` - agent settings
 - `keybindings.json` - custom keybindings
-- `extensions/` - custom tools (websearch, handoff, notification, theme)
+- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt)
 - `skills/` - custom skills (pr-review-comments, resolve-pr-comment)
 - `prompts/` - custom prompts
+
+## Extensions
+
+### edit-prompt
+
+Opens neovim to edit prompt files stored in Obsidian vault (`~/obsidian/delvaze/prompts/`).
+
+**Usage:** `/edit`
+
+- First call prompts for filename, subsequent calls reuse it
+- Creates markdown files with Obsidian-compatible frontmatter
+- Prepends timestamped sections (newest first)
+- Executes the prompt after saving
 
 ## Setup
 

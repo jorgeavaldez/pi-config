@@ -6,3 +6,5 @@ sessions/
 
 # Dependencies - regenerate with: cd extensions && npm install
 extensions/node_modules/
+
+PLAN.md
