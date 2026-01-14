@@ -41,6 +41,16 @@ Opens neovim to edit prompt files stored in Obsidian vault (`~/obsidian/delvaze/
 - Prepends timestamped sections (newest first)
 - Executes the prompt after saving
 
+### qna
+
+Enables the agent to draft clarifying questions and receive user answers asynchronously. Questions appear inline in the session and in the status bar.
+
+**Tool:** `draft_questions` - Agent drafts questions for the user to review
+
+**Commands:**
+- `/questions` - View currently drafted questions
+- `/answer` - Provide answers to the drafted questions
+
 ## Setup
 
 ```bash
