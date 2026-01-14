@@ -5,7 +5,7 @@
 - `AGENTS.md` - global rules (loaded for all sessions)
 - `settings.json` - agent settings
 - `keybindings.json` - custom keybindings
-- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, subagent, task)
+- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, subagent, task, qna)
 - `skills/` - custom skills (pr-review-comments, resolve-pr-comment, commit)
 - `prompts/` - custom prompts
 - `agents/` - subagent definitions
@@ -32,24 +32,18 @@ Unlike subagent (which requires pre-defined agents), task allows ad-hoc workers 
 
 ### edit-prompt
 
-Opens neovim to edit prompt files stored in Obsidian vault (`~/obsidian/delvaze/prompts/`).
+Opens your editor to edit prompt files stored in Obsidian vault (`~/obsidian/delvaze/prompts/`).
 
-**Usage:** `/edit`
+**Usage:** `/edit` - First call prompts for filename, subsequent calls reuse it.
 
-- First call prompts for filename, subsequent calls reuse it
-- Creates markdown files with Obsidian-compatible frontmatter
-- Prepends timestamped sections (newest first)
-- Executes the prompt after saving
+Uses `$EDITOR` → `$VISUAL` → nvim → vim → vi fallback chain.
 
 ### qna
 
-Enables the agent to draft clarifying questions and receive user answers asynchronously. Questions appear inline in the session and in the status bar.
+Enables the agent to draft clarifying questions and receive user answers via external editor. Integrates with edit-prompt (uses active file if set, otherwise temp file).
 
-**Tool:** `draft_questions` - Agent drafts questions for the user to review
-
-**Commands:**
-- `/questions` - View currently drafted questions
-- `/answer` - Provide answers to the drafted questions
+**Tool:** `draft_questions`  
+**Commands:** `/answer`, `/questions`
 
 ## Setup
 

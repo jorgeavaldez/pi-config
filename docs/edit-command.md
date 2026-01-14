@@ -1,6 +1,6 @@
 # `/edit` Command Extension
 
-Opens neovim to edit prompt files stored in an Obsidian vault, then executes the written prompt.
+Opens your editor to edit prompt files stored in an Obsidian vault, then executes the written prompt.
 
 ## Overview
 
@@ -11,8 +11,8 @@ Opens neovim to edit prompt files stored in an Obsidian vault, then executes the
 
 ### Session Flow
 
-1. **First `/edit` in session:** Prompts for filename → creates/opens file → opens neovim → executes prompt
-2. **Subsequent `/edit` in session:** Reuses same file → prepends new section → opens neovim → executes prompt
+1. **First `/edit` in session:** Prompts for filename → creates/opens file → opens editor → executes prompt
+2. **Subsequent `/edit` in session:** Reuses same file → prepends new section → opens editor → executes prompt
 
 The filename persists across session restarts via `pi.appendEntry()`.
 
@@ -29,7 +29,7 @@ The filename is **session-wide**, not branch-specific. All branches in a session
 
 ### Prompt Execution
 
-After saving and quitting neovim, the content between the **paired delimiters** (matching timestamps) is extracted and sent to the agent via `pi.sendUserMessage()`.
+After saving and quitting the editor, the content between the **paired delimiters** (matching timestamps) is extracted and sent to the agent via `pi.sendUserMessage()`.
 
 ## File Format
 
@@ -87,17 +87,38 @@ New sections are **prepended** after frontmatter, pushing older content down. Ea
 | User deletes new section markers | "No prompt entered" (won't fall back to old content) |
 | User deletes only start or end marker | "No prompt entered" (both markers required) |
 | File missing frontmatter | Section prepended at start |
-| Neovim exits abnormally | Warning notification |
+| Editor exits abnormally | Warning notification |
 | Session restored, file deleted | Uses restored path; creates new file |
 | New session (no state) | Prompts for filename as normal |
 | Old file without end markers | "No prompt entered" until user fills new boxed section |
 
-## Neovim Integration
+## Editor Integration
+
+### Editor Selection
+
+Uses a fallback chain (via shared module `extensions/shared/editor-state.ts`):
+1. `$EDITOR` environment variable
+2. `$VISUAL` environment variable
+3. `nvim`
+4. `vim`
+5. `vi`
+
+### Cursor Positioning
+
+The editor opens with cursor positioned on the blank line between start and end markers:
+
+| Editor | Arguments |
+|--------|-----------|
+| vim/nvim/vi | `+{line} filename` |
+| nano | `+{line} filename` |
+| emacs | `+{line} filename` |
+| others | `filename` (no positioning) |
+
+### TUI Handling
 
 - Uses `ctx.ui.custom()` to suspend TUI
-- Spawns `nvim +<line> <filepath>` synchronously
-- Cursor positioned on blank line between start and end markers
-- TUI restored after neovim exits
+- Spawns editor synchronously with `stdio: "inherit"`
+- TUI restored after editor exits
 
 ## Section Extraction Logic
 
@@ -109,3 +130,13 @@ New sections are **prepended** after frontmatter, pushing older content down. Ea
 6. Return empty string if markers missing, out of order, or content empty
 
 This ensures only the specific section created by the current `/edit` invocation is extracted—never old content from previous sections.
+
+## Integration with Q&A Extension
+
+The edit-prompt extension shares its active file state with the qna extension via `extensions/shared/editor-state.ts`. When `/edit` sets an active file:
+
+- The qna extension's `/answer` command will append Q&A sections to that file instead of creating a temp file
+- Q&A history is preserved in the file alongside prompts
+- Both use HTML comment delimiters with timestamps
+
+See [docs/qna.md](qna.md) for Q&A extension details.

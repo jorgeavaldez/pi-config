@@ -10,6 +10,16 @@ This creates a clean separation between:
 - **Agent asking** → Uses `draft_questions` tool
 - **User answering** → Uses `/answer` command with external editor
 
+## Integration with edit-prompt
+
+The Q&A extension integrates with the edit-prompt extension:
+
+- If `/edit` has been used to set an active file, questions are appended to that file instead of creating a temporary file
+- Q&A sections are kept as history in the file, allowing you to review past exchanges
+- If no edit file is set, a temporary file is used (and cleaned up after)
+
+This means your Q&A history lives alongside your prompts in the Obsidian vault.
+
 ## Usage
 
 ### Tool: `draft_questions`
@@ -39,18 +49,16 @@ draft_questions({
 When `draft_questions` is called, questions are rendered inline in the session with nice formatting:
 
 ```
-┌─ ❓ Questions ─────────────────────────────────────────┐
-│                                                        │
-│   1. What database should we use?                      │
-│   2. Do you prefer TypeScript or JavaScript?           │
-│   3. What's the target deployment environment?         │
-│                                                        │
-│   Run /answer to respond                               │
-│                                                        │
-└────────────────────────────────────────────────────────┘
-```
+──────────────────────────────────────────────────────
+📋 Questions for you:
 
-The bordered box with emoji header makes pending questions easy to spot in the conversation. The hint at the bottom reminds you how to respond.
+  1. What database should we use?
+  2. Do you prefer TypeScript or JavaScript?
+  3. What's the target deployment environment?
+
+  Run /answer to respond
+──────────────────────────────────────────────────────
+```
 
 ### Typical Workflow
 
@@ -60,7 +68,7 @@ The bordered box with emoji header makes pending questions easy to spot in the c
 4. Status bar shows: `❓ Questions pending - /answer to respond`
 5. You run `/answer`
 6. Editor opens with questions and an answer section
-7. You write your responses below `# Answers`, save and quit
+7. You write your responses in the answers section, save and quit
 8. Responses are sent as a user message
 9. Agent continues with the information
 
@@ -70,40 +78,59 @@ If you send a new prompt without calling `/answer`, pending questions are automa
 
 ## File Format
 
-When `/answer` opens the editor, it creates a temporary markdown file:
+The extension uses HTML comment delimiters with timestamps to track Q&A sections:
 
 ```markdown
-# Questions
-
+<!-- QUESTIONS: 2026-01-14T21:34:15 -->
 1. What database should we use?
 2. Do you prefer TypeScript or JavaScript?
 3. What's the target deployment environment?
+<!-- ANSWERS: 2026-01-14T21:34:15 -->
 
-# Answers
-
+<!-- /QUESTIONS: 2026-01-14T21:34:15 -->
 ```
 
-Write your responses below the `# Answers` delimiter:
+Write your responses between `<!-- ANSWERS: ... -->` and `<!-- /QUESTIONS: ... -->`:
 
 ```markdown
-# Questions
-
+<!-- QUESTIONS: 2026-01-14T21:34:15 -->
 1. What database should we use?
 2. Do you prefer TypeScript or JavaScript?
 3. What's the target deployment environment?
-
-# Answers
-
+<!-- ANSWERS: 2026-01-14T21:34:15 -->
 1. PostgreSQL
 2. TypeScript with strict mode
 3. AWS Lambda with API Gateway
+<!-- /QUESTIONS: 2026-01-14T21:34:15 -->
 ```
 
 **Rules:**
-- The `# Answers` delimiter must remain in the file
-- Only content below `# Answers` is sent to the LLM
-- Empty responses (nothing below delimiter) cancel the answer
-- The questions section is for reference only (edits are ignored)
+- The delimiters must remain in the file with matching timestamps
+- Only content between `<!-- ANSWERS: ... -->` and `<!-- /QUESTIONS: ... -->` is sent
+- Empty responses cancel the answer
+- **Do not modify the questions section** - the extension verifies they match
+
+### When Using Active Edit File
+
+If `/edit` has set an active file, the Q&A section is prepended after the frontmatter:
+
+```markdown
+---
+id: my-prompt
+---
+
+<!-- QUESTIONS: 2026-01-14T21:34:15 -->
+1. What database should we use?
+<!-- ANSWERS: 2026-01-14T21:34:15 -->
+PostgreSQL
+<!-- /QUESTIONS: 2026-01-14T21:34:15 -->
+
+<!-- prompt: 2026-01-14T21:30:00 -->
+(previous prompt content)
+<!-- prompt-end: 2026-01-14T21:30:00 -->
+```
+
+Multiple Q&A rounds are kept as history in the file.
 
 ## State Management
 
@@ -111,13 +138,13 @@ The extension persists question state across sessions using pi's branch history:
 
 ### How State is Tracked
 
-1. **Draft**: When `draft_questions` is called, the questions are stored in the tool result's `details` field
+1. **Draft**: When `draft_questions` is called, the questions and timestamp are stored in the tool result's `details` field
 2. **Clear**: When questions are answered or skipped, a `qna-clear` custom entry is appended to the branch
 
 ### Session Restore
 
 On `session_start`, the extension walks the branch history:
-1. Finds the last `draft_questions` tool result
+1. Finds the last `draft_questions` tool result (with questions and timestamp)
 2. Checks if a subsequent `qna-clear` entry exists
 3. If questions exist and weren't cleared → restores pending state
 4. Updates status indicator accordingly
@@ -139,13 +166,13 @@ The extension checks these in order:
 
 ### Cursor Positioning
 
-For a better UX, the editor opens with cursor at the end of file:
+For a better UX, the editor opens with cursor positioned at the answers section:
 
 | Editor | Arguments |
 |--------|-----------|
-| vim/nvim/vi | `+ filename` |
-| nano | `+9999 filename` |
-| emacs | `+9999 filename` |
+| vim/nvim/vi | `+{line} filename` |
+| nano | `+{line} filename` |
+| emacs | `+{line} filename` |
 | others | `filename` (no positioning) |
 
 ### TUI Integration
@@ -246,6 +273,21 @@ You: /answer
 Agent: [continues with your specifications]
 ```
 
+### With Active Edit File
+
+```
+You: /edit
+[Select "api-design.md"]
+
+You: Design a REST API
+
+Agent: [calls draft_questions]
+
+You: /answer
+[Editor opens api-design.md with Q&A section prepended]
+[Q&A history is preserved in the file]
+```
+
 ### Viewing Without Answering
 
 ```
@@ -271,7 +313,15 @@ You: /answer
 [Questions restored, can still answer]
 ```
 
-## Related
+## Architecture
 
-- **`question` tool** (examples/extensions/question.ts) - For simple multiple-choice questions with UI selector
-- **`qna` command** (examples/extensions/qna.ts) - Extracts questions from assistant messages into editor
+### Shared State
+
+The `qna.ts` and `edit-prompt.ts` extensions share state via `shared/editor-state.ts`:
+
+- `getActiveEditFile()` / `setActiveEditFile()` - Track active edit file
+- `openInEditor()` - Shared editor spawning with TUI handling
+- `generateTimestamp()` - ISO timestamp generation
+- `createQnaSection()` / `extractQnaAnswers()` / `verifyQnaQuestions()` - Q&A section utilities
+
+This allows Q&A to seamlessly integrate with the edit-prompt workflow.

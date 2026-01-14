@@ -7,7 +7,7 @@
  * Usage:
  *   1. Ask the agent to clarify something - it calls draft_questions
  *   2. Run /answer to open your editor with the questions
- *   3. Write your responses below the "# Answers" section, save and quit
+ *   3. Write your responses below the "<!-- ANSWERS -->" marker, save and quit
  *   4. Your answers are sent to the LLM as a user message
  *
  * Commands:
@@ -16,20 +16,31 @@
  *
  * If you send a new prompt without calling /answer, the pending questions
  * are cleared and the conversation continues normally.
+ *
+ * Integration with edit-prompt:
+ *   If /edit has been used to set an active file, questions are appended
+ *   to that file instead of creating a temporary file. This keeps your
+ *   Q&A history in the Obsidian vault.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-const DELIMITER = "# Answers";
+import {
+  getActiveEditFile,
+  openInEditor,
+  generateTimestamp,
+  createQnaSection,
+  extractQnaAnswers,
+  verifyQnaQuestions,
+} from "./shared/editor-state.js";
 
 interface DraftQuestionsDetails {
 	questions: string;
+	timestamp: string;
 }
 
 interface QnaClearData {
@@ -37,69 +48,78 @@ interface QnaClearData {
 }
 
 /**
- * Get the user's preferred editor with fallback chain
+ * Create temp file with questions using HTML comment delimiters.
+ * Returns the temp file path and cursor line number.
  */
-function getEditor(): string {
-	return process.env.EDITOR || process.env.VISUAL || "nvim" || "vim" || "vi";
-}
-
-/**
- * Get editor arguments to position cursor at end of file
- * Supports vim/nvim/vi with + argument
- */
-function getEditorArgs(filePath: string): string[] {
-	const editor = getEditor();
-	const editorName = editor.split("/").pop()?.toLowerCase() || "";
-
-	// vim, nvim, vi all support + to go to last line
-	if (editorName.includes("vim") || editorName.includes("vi") || editorName === "nvim") {
-		return ["+", filePath];
-	}
-
-	// nano supports +line syntax, use a large number to go to end
-	if (editorName.includes("nano")) {
-		return ["+9999", filePath];
-	}
-
-	// emacs supports +line syntax
-	if (editorName.includes("emacs")) {
-		return ["+9999", filePath];
-	}
-
-	// Default: just the file path
-	return [filePath];
-}
-
-/**
- * Create temp file with questions and delimiter
- */
-function createTempFile(questions: string): string {
+function createTempFile(questions: string, timestamp: string): { tempFile: string; cursorLine: number } {
 	const tempDir = mkdtempSync(join(tmpdir(), "pi-qna-"));
 	const tempFile = join(tempDir, "questions.md");
 
-	const content = `# Questions
-
-${questions}
-
-${DELIMITER}
-
-`;
+	const content = createQnaSection(questions, timestamp) + "\n";
 
 	writeFileSync(tempFile, content, "utf-8");
-	return tempFile;
+
+	// Calculate cursor line (line after ANSWERS marker)
+	// Line 1: <!-- QUESTIONS: timestamp -->
+	// Lines 2-N: questions
+	// Line N+1: <!-- ANSWERS: timestamp -->
+	// Line N+2: (cursor here - blank line for answer)
+	const questionLines = questions.split("\n").length;
+	const cursorLine = 1 + questionLines + 2; // start marker + questions + answers marker + 1
+
+	return { tempFile, cursorLine };
 }
 
 /**
- * Parse the response from the edited file
+ * Prepend Q&A section to the active edit file after frontmatter.
+ * Returns the cursor line number for the answers section.
  */
-function parseResponse(content: string): string | null {
-	const delimiterIndex = content.indexOf(DELIMITER);
-	if (delimiterIndex === -1) {
-		return null;
+function prependQnaToEditFile(filepath: string, questions: string, timestamp: string): number {
+	const content = readFileSync(filepath, "utf-8");
+	const lines = content.split("\n");
+
+	// Find end of frontmatter (second '---')
+	let frontmatterEndLine = -1;
+	let dashCount = 0;
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		if (line !== undefined && line.trim() === "---") {
+			dashCount++;
+			if (dashCount === 2) {
+				frontmatterEndLine = i;
+				break;
+			}
+		}
 	}
 
-	const response = content.slice(delimiterIndex + DELIMITER.length).trim();
-	return response || null;
+	const qnaSection = createQnaSection(questions, timestamp);
+	const qnaSectionLines = qnaSection.split("\n");
+
+	if (frontmatterEndLine === -1) {
+		// No frontmatter - prepend at start
+		const newContent = qnaSection + "\n\n" + content;
+		writeFileSync(filepath, newContent, "utf-8");
+		// Cursor at line after ANSWERS marker
+		const questionLines = questions.split("\n").length;
+		return 1 + questionLines + 2;
+	}
+
+	// Insert after frontmatter
+	const beforeFrontmatter = lines.slice(0, frontmatterEndLine + 1);
+	const afterFrontmatter = lines.slice(frontmatterEndLine + 1);
+
+	const newLines = [...beforeFrontmatter, "", ...qnaSectionLines, "", ...afterFrontmatter];
+	writeFileSync(filepath, newLines.join("\n"), "utf-8");
+
+	// Cursor position:
+	// frontmatterEndLine is 0-indexed
+	// blank line: frontmatterEndLine + 2 (1-indexed)
+	// QUESTIONS marker: frontmatterEndLine + 3
+	// questions content: frontmatterEndLine + 4 to frontmatterEndLine + 3 + questionLines
+	// ANSWERS marker: frontmatterEndLine + 4 + questionLines
+	// cursor (blank for answer): frontmatterEndLine + 5 + questionLines
+	const questionLines = questions.split("\n").length;
+	return frontmatterEndLine + 5 + questionLines;
 }
 
 /**
@@ -116,7 +136,7 @@ function cleanupTempFile(tempFile: string): void {
 
 export default function qna(pi: ExtensionAPI) {
 	// In-memory state for pending questions
-	let pendingQuestions: string | null = null;
+	let pendingQuestions: { questions: string; timestamp: string } | null = null;
 
 	/**
 	 * Update the status indicator based on pending questions state
@@ -135,7 +155,7 @@ export default function qna(pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		pendingQuestions = null;
 
-		let lastDraftedQuestions: string | null = null;
+		let lastDrafted: { questions: string; timestamp: string } | null = null;
 		let wasCleared = false;
 
 		// Walk branch chronologically
@@ -145,8 +165,8 @@ export default function qna(pi: ExtensionAPI) {
 				const msg = entry.message;
 				if ("role" in msg && msg.role === "toolResult" && msg.toolName === "draft_questions") {
 					const details = msg.details as DraftQuestionsDetails | undefined;
-					if (details?.questions) {
-						lastDraftedQuestions = details.questions;
+					if (details?.questions && details?.timestamp) {
+						lastDrafted = { questions: details.questions, timestamp: details.timestamp };
 						wasCleared = false;
 					}
 				}
@@ -159,8 +179,8 @@ export default function qna(pi: ExtensionAPI) {
 		}
 
 		// Restore if questions exist and weren't cleared
-		if (lastDraftedQuestions && !wasCleared) {
-			pendingQuestions = lastDraftedQuestions;
+		if (lastDrafted && !wasCleared) {
+			pendingQuestions = lastDrafted;
 		}
 
 		// Update status indicator
@@ -199,7 +219,8 @@ The questions parameter accepts plain text - format them however is clearest (nu
 		}),
 
 		async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
-			pendingQuestions = params.questions;
+			const timestamp = generateTimestamp();
+			pendingQuestions = { questions: params.questions, timestamp };
 			updateStatusIndicator(ctx);
 
 			return {
@@ -209,7 +230,7 @@ The questions parameter accepts plain text - format them however is clearest (nu
 						text: "Questions drafted. The user can now run /answer to review and respond.",
 					},
 				],
-				details: { questions: params.questions } as DraftQuestionsDetails,
+				details: { questions: params.questions, timestamp } as DraftQuestionsDetails,
 			};
 		},
 
@@ -259,9 +280,9 @@ The questions parameter accepts plain text - format them however is clearest (nu
 			}
 
 			// Display questions using notify for simple cases, or a custom UI for longer content
-			const lines = pendingQuestions.split("\n");
+			const lines = pendingQuestions.questions.split("\n");
 			if (lines.length <= 5) {
-				ctx.ui.notify(`Pending questions:\n${pendingQuestions}`, "info");
+				ctx.ui.notify(`Pending questions:\n${pendingQuestions.questions}`, "info");
 			} else {
 				// For longer questions, use a simple select dialog to display them
 				// User can press Escape to dismiss
@@ -292,49 +313,54 @@ The questions parameter accepts plain text - format them however is clearest (nu
 				return;
 			}
 
-			const questions = pendingQuestions;
-			const tempFile = createTempFile(questions);
-			const editor = getEditor();
-			const editorArgs = getEditorArgs(tempFile);
+			const { questions, timestamp } = pendingQuestions;
+			const activeEditFile = getActiveEditFile();
+
+			// Determine if using edit file or temp file
+			let filepath: string;
+			let cursorLine: number;
+			let usingTempFile = false;
+
+			if (activeEditFile && existsSync(activeEditFile)) {
+				// Prepend Q&A section to the active edit file
+				filepath = activeEditFile;
+				cursorLine = prependQnaToEditFile(filepath, questions, timestamp);
+			} else {
+				// Create temp file
+				const temp = createTempFile(questions, timestamp);
+				filepath = temp.tempFile;
+				cursorLine = temp.cursorLine;
+				usingTempFile = true;
+			}
 
 			try {
-				// Open editor using ctx.ui.custom() to properly suspend/resume TUI
-				const response = await ctx.ui.custom<string | null>((tui, _theme, _kb, done) => {
-					// Stop TUI to release terminal
-					tui.stop();
+				// Open editor
+				const exitCode = await openInEditor(filepath, cursorLine, ctx);
 
-					// Clear screen
-					process.stdout.write("\x1b[2J\x1b[H");
+				if (exitCode === null) {
+					ctx.ui.notify("Editor closed unexpectedly", "warning");
+					return;
+				}
 
-					// Spawn editor with cursor positioning
-					const result = spawnSync(editor, editorArgs, {
-						stdio: "inherit",
-						env: process.env,
-					});
+				// Read and parse the file
+				let content: string;
+				try {
+					content = readFileSync(filepath, "utf-8");
+				} catch {
+					ctx.ui.notify("Failed to read file after editing", "error");
+					return;
+				}
 
-					// Restart TUI
-					tui.start();
-					tui.requestRender(true);
+				// Verify questions haven't been tampered with
+				if (!verifyQnaQuestions(content, timestamp, questions)) {
+					ctx.ui.notify("Questions section was modified - please don't edit the questions", "error");
+					return;
+				}
 
-					// Read and parse the file
-					let parsedResponse: string | null = null;
-					if (result.status === 0) {
-						try {
-							const content = readFileSync(tempFile, "utf-8");
-							parsedResponse = parseResponse(content);
-						} catch {
-							// File read error - treat as cancelled
-						}
-					}
+				// Extract answers
+				const answers = extractQnaAnswers(content, timestamp);
 
-					done(parsedResponse);
-
-					// Return empty component (immediately disposed since done() was called)
-					return { render: () => [], invalidate: () => {} };
-				});
-
-				// Handle the response
-				if (response === null) {
+				if (!answers) {
 					ctx.ui.notify("No response provided - questions remain pending", "warning");
 					return;
 				}
@@ -347,10 +373,12 @@ The questions parameter accepts plain text - format them however is clearest (nu
 				updateStatusIndicator(ctx);
 
 				// Send response as user message
-				pi.sendUserMessage(response);
+				pi.sendUserMessage(answers);
 			} finally {
-				// Clean up temp file
-				cleanupTempFile(tempFile);
+				// Clean up temp file if we created one
+				if (usingTempFile) {
+					cleanupTempFile(filepath);
+				}
 			}
 		},
 	});

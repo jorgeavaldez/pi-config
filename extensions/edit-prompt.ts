@@ -1,7 +1,7 @@
 /**
  * Edit Prompt Extension
  *
- * Opens neovim to edit prompt files in Obsidian vault.
+ * Opens editor to edit prompt files in Obsidian vault.
  * Prompts are stored in markdown with HTML comment delimiters.
  *
  * Usage:
@@ -10,22 +10,19 @@
  * Files stored in: ~/obsidian/delvaze/prompts/
  */
 
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, basename } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import type { TUI, Component } from "@mariozechner/pi-tui";
+import {
+  getActiveEditFile,
+  setActiveEditFile,
+  clearActiveEditFile,
+  openInEditor,
+  generateTimestamp,
+} from "./shared/editor-state.js";
 
 const PROMPTS_DIR = join(homedir(), "obsidian", "delvaze", "prompts");
-
-/**
- * Generate ISO timestamp for section marker.
- * Format: YYYY-MM-DDTHH:MM:SS (no milliseconds, no timezone)
- */
-function generateTimestamp(): string {
-  return new Date().toISOString().slice(0, 19);
-}
 
 /**
  * Generate frontmatter for a new file.
@@ -188,54 +185,15 @@ function extractSection(filepath: string, timestamp: string): string {
   return content.slice(contentStart, endIndex).trim();
 }
 
-/**
- * Open file in neovim with cursor at specified line.
- * Suspends TUI during editing, resumes after.
- */
-async function openInNeovim(
-  filepath: string,
-  cursorLine: number,
-  ctx: ExtensionCommandContext
-): Promise<number | null> {
-  return ctx.ui.custom<number | null>((tui: TUI, _theme, _kb, done) => {
-    // Stop TUI to release terminal
-    tui.stop();
 
-    // Clear screen
-    process.stdout.write("\x1b[2J\x1b[H");
-
-    // Run neovim with cursor at specified line
-    const result = spawnSync("nvim", [`+${cursorLine}`, filepath], {
-      stdio: "inherit",
-      env: process.env,
-    });
-
-    // Restart TUI
-    tui.start();
-    tui.requestRender(true);
-
-    // Signal completion
-    done(result.status);
-
-    // Return empty component (immediately disposed since done() was called)
-    const emptyComponent: Component = {
-      render: () => [],
-      invalidate: () => {},
-    };
-    return emptyComponent;
-  });
-}
 
 export default function editPromptExtension(pi: ExtensionAPI) {
-  // Session state - tracks the active prompt file for this session
-  let activePromptFile: string | undefined;
-
   /**
    * Reconstruct state from session entries.
-   * Finds the last edit-prompt-state entry and restores activePromptFile.
+   * Finds the last edit-prompt-state entry and restores activeEditFile in shared state.
    */
   const reconstructState = (ctx: ExtensionContext) => {
-    activePromptFile = undefined;
+    clearActiveEditFile();
 
     const entries = ctx.sessionManager.getEntries();
     const stateEntry = entries
@@ -245,7 +203,7 @@ export default function editPromptExtension(pi: ExtensionAPI) {
       .pop() as { data?: { activePromptFile: string } } | undefined;
 
     if (stateEntry?.data?.activePromptFile) {
-      activePromptFile = stateEntry.data.activePromptFile;
+      setActiveEditFile(stateEntry.data.activePromptFile);
     }
   };
 
@@ -256,7 +214,7 @@ export default function editPromptExtension(pi: ExtensionAPI) {
   pi.on("session_tree", async (_event, ctx) => reconstructState(ctx));
 
   pi.registerCommand("edit", {
-    description: "Edit a prompt file in neovim and execute it",
+    description: "Edit a prompt file in your editor and execute it",
     handler: async (_args, ctx) => {
       // 1. Check UI availability
       if (!ctx.hasUI) {
@@ -271,25 +229,23 @@ export default function editPromptExtension(pi: ExtensionAPI) {
       }
 
       // 3. Get filename (prompt on first call, reuse on subsequent)
-      let filepath: string;
+      let filepath = getActiveEditFile();
 
-      if (activePromptFile) {
-        filepath = activePromptFile;
-      } else {
+      if (!filepath) {
         const filename = await getFilename(ctx);
         if (!filename) {
           return;
         }
         filepath = join(PROMPTS_DIR, filename);
-        activePromptFile = filepath;
+        setActiveEditFile(filepath);
         pi.appendEntry("edit-prompt-state", { activePromptFile: filepath });
       }
 
       // 4. Prepare file (create new or prepend section to existing)
       const { cursorLine, timestamp } = prepareFile(filepath);
 
-      // 5. Open neovim
-      const exitCode = await openInNeovim(filepath, cursorLine, ctx);
+      // 5. Open editor
+      const exitCode = await openInEditor(filepath, cursorLine, ctx);
 
       if (exitCode === null) {
         ctx.ui.notify("Editor closed unexpectedly", "warning");
