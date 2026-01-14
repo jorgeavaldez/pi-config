@@ -165,8 +165,10 @@ export default function qna(pi: ExtensionAPI) {
 				const msg = entry.message;
 				if ("role" in msg && msg.role === "toolResult" && msg.toolName === "draft_questions") {
 					const details = msg.details as DraftQuestionsDetails | undefined;
-					if (details?.questions && details?.timestamp) {
-						lastDrafted = { questions: details.questions, timestamp: details.timestamp };
+					if (details?.questions) {
+						// Backward compat: old entries may not have timestamp, generate one
+						const timestamp = details.timestamp || generateTimestamp();
+						lastDrafted = { questions: details.questions, timestamp };
 						wasCleared = false;
 					}
 				}
