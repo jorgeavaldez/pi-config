@@ -2,10 +2,11 @@
 
 ## Contents
 
+- `AGENTS.md` - global rules (loaded for all sessions)
 - `settings.json` - agent settings
 - `keybindings.json` - custom keybindings
 - `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, subagent, task)
-- `skills/` - custom skills (pr-review-comments, resolve-pr-comment)
+- `skills/` - custom skills (pr-review-comments, resolve-pr-comment, commit)
 - `prompts/` - custom prompts
 - `agents/` - subagent definitions
 
