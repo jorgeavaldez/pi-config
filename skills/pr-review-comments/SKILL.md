@@ -43,29 +43,45 @@ This will create individual `{comment-id}-review-feedback.md` files in the curre
 
 ### 1.2 Read All Comment Files
 
-List and read all the generated comment files:
+List all the generated comment files:
 
 ```bash
 ls -la *-review-feedback.md 2>/dev/null
 ```
 
-Read each file to understand the review feedback. Each file contains:
+Each file contains:
 - The file path and line number where the comment applies
 - The review comment content
 - Instructions for verification
 
-### 1.3 Pre-analyze Comments for Validity
+### 1.3 Pre-analyze Comments for Validity (Use Parallel Tasks)
 
-For each comment, read the relevant code and context. Determine:
+**Use the `task` tool to investigate comments in parallel.** Spawn a task for each comment file to analyze it independently. This significantly speeds up the triage process.
+
+For each comment, the task should read the comment file, examine the relevant code and context, and determine:
 
 - **Is it correct?** Does the suggestion actually apply? Is it based on a misunderstanding?
 - **Is it appropriate for this PR?** Too minor? Too large/out of scope?
 - **Is it already addressed?** Sometimes code has changed since the comment was made
 
-Classify each comment as:
+Example task invocation:
+
+```
+task({
+  tasks: [
+    { description: "Analyze PR comment PRRC_abc-review-feedback.md: Read the comment file, examine the referenced code at [file:line], determine if the feedback is valid/applicable. Return: comment ID, file:line, issue summary, verdict (INCLUDE/QUESTIONABLE/EXCLUDE), and reasoning." },
+    { description: "Analyze PR comment PRRC_def-review-feedback.md: Read the comment file, examine the referenced code at [file:line], determine if the feedback is valid/applicable. Return: comment ID, file:line, issue summary, verdict (INCLUDE/QUESTIONABLE/EXCLUDE), and reasoning." },
+    // ... one task per comment file
+  ]
+})
+```
+
+Each task should classify its comment as:
 - ✅ **INCLUDE**: Valid and should be addressed
 - ⚠️ **QUESTIONABLE**: Might not be valid or appropriate (explain why)
 - ❌ **EXCLUDE**: Incorrect or not applicable (explain why)
+
+Collect results from all tasks before proceeding to batching.
 
 ### 1.4 Batch Comments by Semantic Similarity
 
@@ -204,7 +220,20 @@ Before starting work, update `REVIEW_COMMENT_WORK.md`:
 
 ### 3.2 Address the Comments
 
-For each comment in the current batch:
+**Use tasks for investigation, but make edits sequentially.**
+
+If the batch has multiple comments, consider using parallel tasks to investigate each comment's context before making changes:
+
+```
+task({
+  tasks: [
+    { description: "Investigate comment PRRC_abc: Read [file] around line [N], understand the current implementation, and recommend the specific change needed to address: '[comment summary]'. Do NOT make edits." },
+    { description: "Investigate comment PRRC_def: Read [file] around line [N], understand the current implementation, and recommend the specific change needed to address: '[comment summary]'. Do NOT make edits." },
+  ]
+})
+```
+
+After gathering investigation results, make the actual code changes **sequentially** (to avoid edit conflicts):
 
 1. Read the relevant file(s)
 2. Understand the feedback and the surrounding code
@@ -296,6 +325,8 @@ When all batches are marked as done:
 
 ## Key Reminders
 
+- **Use parallel tasks for comment investigation** - spawn tasks to analyze/investigate comments in parallel for faster triage and batch processing
+- **Make code edits sequentially** - tasks are for read-only investigation; actual edits should be done one at a time to avoid conflicts
 - **Always update REVIEW_COMMENT_WORK.md BEFORE asking for feedback**
 - **Always WAIT for user response between batches** - never auto-proceed
 - **Resolve comments on GitHub after addressing them** - use the `resolve-pr-comment` skill
