@@ -23,7 +23,7 @@
  *   Q&A history in the Obsidian vault.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
@@ -150,9 +150,9 @@ export default function qna(pi: ExtensionAPI) {
 	}
 
 	// =========================================================================
-	// EVENT: session_start - Reconstruct state from branch history
+	// STATE: Restore pending questions from branch history
 	// =========================================================================
-	pi.on("session_start", async (_event, ctx) => {
+	function reconstructState(ctx: ExtensionContext) {
 		pendingQuestions = null;
 
 		let lastDrafted: { questions: string; timestamp: string } | null = null;
@@ -187,6 +187,28 @@ export default function qna(pi: ExtensionAPI) {
 
 		// Update status indicator
 		updateStatusIndicator(ctx);
+	}
+
+	// =========================================================================
+	// EVENT: session_start - Reconstruct state from branch history
+	// =========================================================================
+	pi.on("session_start", async (_event, ctx) => {
+		reconstructState(ctx);
+	});
+
+	// =========================================================================
+	// EVENT: session_switch/session_fork/session_tree - Reconstruct on navigation
+	// =========================================================================
+	pi.on("session_switch", async (_event, ctx) => {
+		reconstructState(ctx);
+	});
+
+	pi.on("session_fork", async (_event, ctx) => {
+		reconstructState(ctx);
+	});
+
+	pi.on("session_tree", async (_event, ctx) => {
+		reconstructState(ctx);
 	});
 
 	// =========================================================================
