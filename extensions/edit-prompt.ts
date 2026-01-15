@@ -7,11 +7,11 @@
  * Usage:
  *   /edit              - First call prompts for filename, subsequent calls reuse it
  *
- * Files stored in: ~/obsidian/delvaze/prompts/
+ * Files stored in: configurable via promptsDir in settings.json (default: ~/.pi/prompts)
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+
 import { join, basename } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import {
@@ -21,8 +21,7 @@ import {
   openInEditor,
   generateTimestamp,
 } from "./shared/editor-state.js";
-
-const PROMPTS_DIR = join(homedir(), "obsidian", "delvaze", "prompts");
+import { getPromptsDir } from "./shared/settings-utils.js";
 
 /**
  * Generate frontmatter for a new file.
@@ -42,7 +41,7 @@ tags: []
  * Prompt user for filename, handling .md extension and existing file confirmation.
  * Returns the normalized filename (with .md) or undefined if cancelled.
  */
-async function getFilename(ctx: ExtensionCommandContext): Promise<string | undefined> {
+async function getFilename(ctx: ExtensionCommandContext, promptsDir: string): Promise<string | undefined> {
   while (true) {
     const input = await ctx.ui.input("Prompt filename:");
 
@@ -56,7 +55,7 @@ async function getFilename(ctx: ExtensionCommandContext): Promise<string | undef
       filename = filename + ".md";
     }
 
-    const filepath = join(PROMPTS_DIR, filename);
+    const filepath = join(promptsDir, filename);
     if (existsSync(filepath)) {
       const continueWithExisting = await ctx.ui.confirm(
         "File exists",
@@ -216,6 +215,8 @@ export default function editPromptExtension(pi: ExtensionAPI) {
   pi.registerCommand("edit", {
     description: "Edit a prompt file in your editor and execute it",
     handler: async (_args, ctx) => {
+      const PROMPTS_DIR = getPromptsDir();
+
       // 1. Check UI availability
       if (!ctx.hasUI) {
         ctx.ui.notify("/edit requires interactive mode", "error");
@@ -232,7 +233,7 @@ export default function editPromptExtension(pi: ExtensionAPI) {
       let filepath = getActiveEditFile();
 
       if (!filepath) {
-        const filename = await getFilename(ctx);
+        const filename = await getFilename(ctx, PROMPTS_DIR);
         if (!filename) {
           return;
         }

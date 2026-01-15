@@ -10,6 +10,24 @@
 - `prompts/` - custom prompts
 - `agents/` - subagent definitions
 
+## Configuration
+
+Custom settings in `settings.json`:
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `promptsDir` | Directory for prompt files | `~/.pi/prompts` |
+| `exaMcpEndpoint` | Exa AI MCP endpoint URL | `https://mcp.exa.ai/mcp` |
+
+Example:
+
+```json
+{
+  "promptsDir": "~/obsidian/vault/prompts/",
+  "exaMcpEndpoint": "https://mcp.exa.ai/mcp"
+}
+```
+
 ## Extensions
 
 ### subagent
@@ -32,7 +50,7 @@ Unlike subagent (which requires pre-defined agents), task allows ad-hoc workers 
 
 ### edit-prompt
 
-Opens your editor to edit prompt files stored in Obsidian vault (`~/obsidian/delvaze/prompts/`).
+Opens your editor to edit prompt files (configurable via `promptsDir` setting).
 
 **Usage:** `/edit` - First call prompts for filename, subsequent calls reuse it.
 

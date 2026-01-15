@@ -5,7 +5,7 @@ Opens your editor to edit prompt files stored in an Obsidian vault, then execute
 ## Overview
 
 **Location:** `~/.pi/agent/extensions/edit-prompt.ts`  
-**Storage:** `~/obsidian/delvaze/prompts/` (hardcoded, not configurable)
+**Storage:** Configurable via `promptsDir` in `~/.pi/agent/settings.json` (default: `~/.pi/prompts`)
 
 ## Behavior
 
@@ -140,3 +140,26 @@ The edit-prompt extension shares its active file state with the qna extension vi
 - Both use HTML comment delimiters with timestamps
 
 See [docs/qna.md](qna.md) for Q&A extension details.
+
+## Configuration
+
+### Prompts Directory
+
+The storage location for prompt files is configured via `promptsDir` in your settings file:
+
+**File:** `~/.pi/agent/settings.json`
+
+```json
+{
+  "promptsDir": "~/obsidian/vault/prompts"
+}
+```
+
+### Details
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `promptsDir` | `~/.pi/prompts` | Directory where prompt files are stored |
+
+- **Tilde expansion:** Paths starting with `~` are expanded to your home directory
+- **Auto-creation:** The directory is not auto-created; it must exist before use

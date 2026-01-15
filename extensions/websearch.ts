@@ -10,8 +10,7 @@ import { truncateHead, formatSize, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "
 import { Type } from "@sinclair/typebox";
 import { StringEnum } from "@mariozechner/pi-ai";
 import { Text } from "@mariozechner/pi-tui";
-
-const EXA_MCP_ENDPOINT = "https://mcp.exa.ai/mcp";
+import { getExaMcpEndpoint } from "./shared/settings-utils.js";
 const TIMEOUT_MS = 25000;
 
 interface WebSearchParams {
@@ -34,6 +33,7 @@ interface WebSearchDetails {
 }
 
 async function performSearch(params: WebSearchParams, signal?: AbortSignal): Promise<string> {
+	const EXA_MCP_ENDPOINT = getExaMcpEndpoint();
 	const request = {
 		jsonrpc: "2.0",
 		id: 1,

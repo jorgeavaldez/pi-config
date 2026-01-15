@@ -36,7 +36,7 @@ ls -la REVIEW_COMMENT_WORK.md 2>/dev/null
 Run the script to fetch unresolved PR review comments:
 
 ```bash
-/Users/jorge/dots/scripts/get_pr_review_comments
+~/.pi/agent/skills/pr-review-comments/get_pr_review_comments
 ```
 
 This will create individual `{comment-id}-review-feedback.md` files in the current directory.
