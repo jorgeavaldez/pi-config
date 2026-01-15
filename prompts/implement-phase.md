@@ -2,8 +2,8 @@
 description: Implement Phase(s) from PLAN.md
 ---
 read through @PLAN.md very carefully.
-you are going to implement Phase(s) $1 of the plan.
-you can assume that ANY and ALL previous phases of the plan have been implemented, if $1 is midway through the PLAN file.
+you are going to implement Phase(s) $@ of the plan.
+you can assume that ANY and ALL previous phases of the plan have been implemented, if $@ is midway through the PLAN file.
 try and stick to the plan as much as possible.
 it contains context and investigation into the existing code and any necessary context.
 you are free to make improvements, revise, and adapt any sample code as necessary. make sure you are hoisting imports to the top level, and NEVER using the Any type, nor suppressing linter or typechecking errors unless absolutely necessary.
