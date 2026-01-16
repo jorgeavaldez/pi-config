@@ -66,7 +66,8 @@ Enables the agent to draft clarifying questions and receive user answers via ext
 ## Setup
 
 ```bash
-git clone <repo-url> ~/.pi/agent
+mkdir -p ~/.pi/agent
+git clone git@github.com:jorgeavaldez/pi-config.git ~/.pi/agent
 cd ~/.pi/agent/extensions && npm install
 ```
 
