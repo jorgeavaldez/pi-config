@@ -27,6 +27,14 @@ The active prompt filename is stored in the session file as a custom entry (`edi
 
 The filename is **session-wide**, not branch-specific. All branches in a session share the same active prompt file.
 
+### Status Indicator
+
+When an active prompt file is set, a status indicator appears in the footer showing the current filename (e.g., `📝 my-prompt.md`). This indicator:
+
+- Appears when you first set a filename via `/edit`
+- Persists across session restarts, switches, forks, and tree navigation
+- Clears when starting a new session without a previous prompt file
+
 ### Prompt Execution
 
 After saving and quitting the editor, the content between the **paired delimiters** (matching timestamps) is extracted and sent to the agent via `pi.sendUserMessage()`.

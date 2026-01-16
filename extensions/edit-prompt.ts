@@ -23,6 +23,8 @@ import {
 } from "./shared/editor-state.js";
 import { getPromptsDir } from "./shared/settings-utils.js";
 
+const STATUS_KEY = "edit-prompt";
+
 /**
  * Generate frontmatter for a new file.
  */
@@ -188,6 +190,19 @@ function extractSection(filepath: string, timestamp: string): string {
 
 export default function editPromptExtension(pi: ExtensionAPI) {
   /**
+   * Update the status indicator with the current filename.
+   */
+  const updateStatusIndicator = (ctx: ExtensionContext) => {
+    const filepath = getActiveEditFile();
+    if (filepath) {
+      const filename = basename(filepath);
+      ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("accent", `📝 ${filename}`));
+    } else {
+      ctx.ui.setStatus(STATUS_KEY, undefined);
+    }
+  };
+
+  /**
    * Reconstruct state from session entries.
    * Finds the last edit-prompt-state entry and restores activeEditFile in shared state.
    */
@@ -204,6 +219,8 @@ export default function editPromptExtension(pi: ExtensionAPI) {
     if (stateEntry?.data?.activePromptFile) {
       setActiveEditFile(stateEntry.data.activePromptFile);
     }
+
+    updateStatusIndicator(ctx);
   };
 
   // Reconstruct state on session lifecycle events
@@ -240,6 +257,7 @@ export default function editPromptExtension(pi: ExtensionAPI) {
         filepath = join(PROMPTS_DIR, filename);
         setActiveEditFile(filepath);
         pi.appendEntry("edit-prompt-state", { activePromptFile: filepath });
+        updateStatusIndicator(ctx);
       }
 
       // 4. Prepare file (create new or prepend section to existing)
