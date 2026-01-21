@@ -12,6 +12,7 @@ CODE_REVIEW_BOTS=(
     "graphite-app"
     "chatgpt-codex-connector"
     "nebari-bot"
+    "sentry"
 )
 
 # Colors for output
