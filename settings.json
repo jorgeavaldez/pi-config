@@ -1,8 +1,8 @@
 {
-  "lastChangelogVersion": "0.46.0",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.2-codex",
-  "defaultThinkingLevel": "high",
+  "lastChangelogVersion": "0.49.2",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-opus-4-5",
+  "defaultThinkingLevel": "off",
   "theme": "light",
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
@@ -10,5 +10,6 @@
     "anthropic/claude-opus-4-5",
     "openai-codex/gpt-5.2-codex",
     "anthropic/claude-sonnet-4-5"
-  ]
+  ],
+  "hideThinkingBlock": false
 }
