@@ -3,17 +3,7 @@
 
 set -euo pipefail
 
-# Script to extract GitHub PR review comments from various code review bots and format them
-# for further processing by Claude or other tools
-
-# Code review bot usernames to filter comments from
-# Add new bot usernames here as needed
-CODE_REVIEW_BOTS=(
-    "graphite-app"
-    "chatgpt-codex-connector"
-    "nebari-bot"
-    "sentry"
-)
+# Script to extract GitHub PR review comments and output them for further processing
 
 # Colors for output
 RED='\033[0;31m'
@@ -24,18 +14,6 @@ NC='\033[0m' # No Color
 log_info() { echo -e "${GREEN}[INFO]${NC} $1" >&2; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1" >&2; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
-
-# Build jq filter for code review bot usernames
-build_bot_filter() {
-    local filter=""
-    for bot in "${CODE_REVIEW_BOTS[@]}"; do
-        if [ -n "$filter" ]; then
-            filter="$filter or "
-        fi
-        filter="$filter.node.comments.edges[0].node.author.login == \"$bot\""
-    done
-    echo "$filter"
-}
 
 # Function to extract GitHub owner and repo from git remote
 get_github_repo_info() {
@@ -145,26 +123,14 @@ clean_comment_body() {
     ' | sed -E '/^```suggestion$/,/^```$/d' | sed '/^[[:space:]]*$/d'
 }
 
-# Function to format comment for Claude prompt
+# Function to format comment output
 format_comment() {
     local comment_id="$1"
     local file_path="$2"
     local line_number="$3"
     local clean_body="$4"
 
-    # Format file path with line number if available
-    local file_location="$file_path"
-    if [ "$line_number" != "null" ] && [ -n "$line_number" ]; then
-        file_location="$file_path line $line_number"
-    fi
-
-    cat <<EOF
-i got this review feedback in @$file_location
-
-$(echo "$clean_body" | sed 's/^/> /')
-
-think very hard to determine if this is actually an error. if you make code changes, check your work with \`make lint\` in the backend directory and \`ENV=local bun run lint\` in the frontend directory.
-EOF
+    echo "$clean_body"
 }
 
 # Main function
@@ -186,16 +152,12 @@ main() {
     temp_dir=$(mktemp -d)
     trap "rm -rf '$temp_dir'" EXIT
 
-    # Fetch unresolved comments from specific users using GraphQL API
-    log_info "Fetching unresolved comments from code reviewers..."
+    # Fetch unresolved comments using GraphQL API
+    log_info "Fetching unresolved PR review comments..."
     local comments_json="$temp_dir/comments.json"
 
-    # Build the filter for bot usernames
-    local bot_filter
-    bot_filter=$(build_bot_filter)
-
     if ! gh api graphql -f query='{ repository(owner: "'"$repo_owner"'", name: "'"$repo_name"'") { pullRequest(number: '$pr_number') { reviewThreads(first: 100) { edges { node { id isResolved comments(first: 10) { edges { node { id body path line author { login } createdAt } } } } } } } } }' \
-        --jq '.data.repository.pullRequest.reviewThreads.edges[] | select(.node.isResolved == false and ('"$bot_filter"')) | .node.comments.edges[0].node | {id: .id, body: .body, path: .path, line: .line, created_at: .createdAt}' \
+        --jq '.data.repository.pullRequest.reviewThreads.edges[] | select(.node.isResolved == false) | .node.comments.edges[0].node | {id: .id, body: .body, path: .path, line: .line, created_at: .createdAt}' \
         >"$comments_json"; then
         log_error "Failed to fetch PR comments"
         exit 1
@@ -209,7 +171,7 @@ main() {
 
     local total_comments
     total_comments=$(wc -l <"$comments_json")
-    log_info "Found $total_comments unresolved comments from code reviewers"
+    log_info "Found $total_comments unresolved comments"
 
     local processed_count=0
     local stale_count=0
