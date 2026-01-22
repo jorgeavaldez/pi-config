@@ -130,6 +130,14 @@ format_comment() {
     local line_number="$3"
     local clean_body="$4"
 
+    # Format file path with line number if available
+    local file_location="$file_path"
+    if [ "$line_number" != "null" ] && [ -n "$line_number" ]; then
+        file_location="$file_path:$line_number"
+    fi
+
+    echo "$file_location"
+    echo ""
     echo "$clean_body"
 }
 
