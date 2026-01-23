@@ -71,6 +71,7 @@ CRITICAL: Actively verify that changed code aligns with the rest of the codebase
 - Function signatures match (argument order, required params, types)
 - Config keys, env vars, schema fields, and model properties exist
 - State transitions and preconditions are valid
+- Hardcoded strings (filenames, keys, identifiers) match what producers actually write—search for where the string is *produced*, not just consumed
 
 **External dependency contracts:**
 - Verify API functions exist and are used correctly (check docs, search the web if needed)
