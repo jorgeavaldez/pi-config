@@ -65,6 +65,23 @@ Flag issues that:
 8. Are clearly not intentional changes by the author.
 9. Be particularly careful with untrusted user input and follow the specific guidelines to review.
 
+## Codebase Integration & Contract Violations
+
+CRITICAL: Actively check for mismatches between the changed code and the rest of the existing codebase. These integration issues are often the most impactful bugs. Flag:
+
+1. **Enum/constant mismatches**: New code using values that don't exist in referenced enums, or missing cases for existing enum values. Verify enum members match exactly.
+2. **File path/name misalignment**: References to files, imports, or paths that don't match actual file names or locations in the codebase. Check for typos, case sensitivity issues.
+3. **API contract violations**: Function calls with wrong argument order, missing required parameters, or incorrect types vs what the callee expects.
+4. **Configuration key mismatches**: Using config keys, environment variables, or feature flags that don't match what the rest of the system expects or defines.
+5. **Schema/model field mismatches**: Referencing database columns, API fields, or model properties that don't exist or are named differently.
+6. **Protocol/format mismatches**: Expecting data in a format different from what producers/consumers actually use (e.g., JSON vs form data, date formats, encoding).
+7. **State machine violations**: Transitioning to states that don't exist, or assuming preconditions that aren't guaranteed by callers.
+8. **Interface/type mismatches**: Implementing interfaces incorrectly, or assuming a type has methods/properties it doesn't have.
+9. **Magic string/number drift**: Hardcoded values that should match constants defined elsewhere but don't.
+10. **Event/message name mismatches**: Publishing or subscribing to events/messages with names that don't match the other side of the contract.
+
+When reviewing, actively search the codebase to verify that referenced identifiers, constants, paths, and contracts actually exist and match. Don't assume - verify.
+
 ## Untrusted User Input
 
 1. Be careful with open redirects, they must always be checked to only go to trusted domains (?next_page=...)
