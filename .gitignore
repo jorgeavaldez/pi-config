@@ -8,3 +8,6 @@ sessions/
 extensions/node_modules/
 
 PLAN.md
+
+# Binary/executable directory
+bin/
