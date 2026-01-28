@@ -11,10 +11,36 @@ Opens your editor to edit prompt files stored in an Obsidian vault, then execute
 
 ### Session Flow
 
-1. **First `/edit` in session:** Prompts for filename → creates/opens file → opens editor → executes prompt
+1. **First `/edit` in session:** File selector dialog → creates/opens file → opens editor → executes prompt
 2. **Subsequent `/edit` in session:** Reuses same file → prepends new section → opens editor → executes prompt
 
 The filename persists across session restarts via `pi.appendEntry()`.
+
+### File Selection Dialog
+
+The dialog has two modes, toggled with `Ctrl+R`:
+
+| Mode | Description |
+|------|-------------|
+| **New File** (default) | Type a filename to create or open |
+| **Search** | Fuzzy search existing files in `promptsDir` using `fd` |
+
+**Search mode features:**
+- Fuzzy matching (e.g., `rem` matches `remediation-pr-close.md`)
+- Shows file metadata: modified time, created time, file size
+- Arrow keys to navigate, Tab to autocomplete into input box
+- Requires `fd` to be installed; no suggestions shown without it
+
+**Key bindings:**
+
+| Key | New File Mode | Search Mode |
+|-----|---------------|-------------|
+| `Enter` | Create/open file | Open selected file |
+| `Escape` | Cancel dialog | Back to New File (preserves input) |
+| `Ctrl+R` | Switch to Search | Switch to New File (preserves input) |
+| `Ctrl+C` | Clear input, then cancel if empty | Clear input, then back to New File if empty |
+| `Tab` | — | Autocomplete selection into input |
+| `↑/↓` | — | Navigate suggestions |
 
 ### Session Persistence
 
@@ -90,7 +116,8 @@ New sections are **prepended** after frontmatter, pushing older content down. Ea
 |----------|----------|
 | Directory doesn't exist | Error notification, exits |
 | Empty/cancel filename input | Exits silently |
-| File already exists | Confirmation dialog; "no" re-prompts |
+| Search mode, file doesn't exist | Error notification (files must exist in Search mode) |
+| `fd` not installed | Search mode shows no suggestions |
 | Empty prompt saved | "No prompt entered" notification, no execution |
 | User deletes new section markers | "No prompt entered" (won't fall back to old content) |
 | User deletes only start or end marker | "No prompt entered" (both markers required) |

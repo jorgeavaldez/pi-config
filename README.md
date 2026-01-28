@@ -52,7 +52,11 @@ Unlike subagent (which requires pre-defined agents), task allows ad-hoc workers 
 
 Opens your editor to edit prompt files (configurable via `promptsDir` setting).
 
-**Usage:** `/edit` - First call prompts for filename, subsequent calls reuse it.
+**Usage:** `/edit` - First call opens file selector, subsequent calls reuse the file.
+
+Two modes in file selector (toggle with `Ctrl+R`):
+- **New File** (default): Type filename to create/open
+- **Search**: Fuzzy search existing files (requires `fd`)
 
 Uses `$EDITOR` → `$VISUAL` → nvim → vim → vi fallback chain.
 
