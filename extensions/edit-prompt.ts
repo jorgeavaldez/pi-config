@@ -677,14 +677,15 @@ export default function editPromptExtension(pi: ExtensionAPI) {
   };
 
   /**
-   * Reconstruct state from session entries.
+   * Reconstruct state from session branch.
    * Finds the last edit-prompt-state entry and restores activeEditFile in shared state.
+   * Uses getBranch() to include entries from parent branches (important after /answer).
    */
   const reconstructState = (ctx: ExtensionContext) => {
     clearActiveEditFile();
 
-    const entries = ctx.sessionManager.getEntries();
-    const stateEntry = entries
+    const branch = ctx.sessionManager.getBranch();
+    const stateEntry = branch
       .filter((e: { type: string; customType?: string }) =>
         e.type === "custom" && e.customType === "edit-prompt-state"
       )

@@ -30,13 +30,28 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  getActiveEditFile,
   openInEditor,
   generateTimestamp,
   createQnaSection,
   extractQnaAnswers,
   verifyQnaQuestions,
 } from "./shared/editor-state.js";
+
+/**
+ * Get the active edit file from the session.
+ * This reads from session entries instead of module state because
+ * jiti may load each extension with its own module instance.
+ */
+function getActiveEditFileFromSession(ctx: ExtensionContext): string | undefined {
+  const branch = ctx.sessionManager.getBranch();
+  const stateEntry = branch
+    .filter((e: { type: string; customType?: string }) =>
+      e.type === "custom" && e.customType === "edit-prompt-state"
+    )
+    .pop() as { data?: { activePromptFile: string } } | undefined;
+
+  return stateEntry?.data?.activePromptFile;
+}
 
 interface DraftQuestionsDetails {
 	questions: string;
@@ -338,7 +353,7 @@ The questions parameter accepts plain text - format them however is clearest (nu
 			}
 
 			const { questions, timestamp } = pendingQuestions;
-			const activeEditFile = getActiveEditFile();
+			const activeEditFile = getActiveEditFileFromSession(ctx);
 
 			// Determine if using edit file or temp file
 			let filepath: string;
