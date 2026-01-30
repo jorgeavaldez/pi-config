@@ -1,8 +1,8 @@
 {
-  "lastChangelogVersion": "0.50.3",
+  "lastChangelogVersion": "0.50.5",
   "defaultProvider": "anthropic",
   "defaultModel": "claude-opus-4-5",
-  "defaultThinkingLevel": "off",
+  "defaultThinkingLevel": "high",
   "theme": "light",
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
@@ -16,5 +16,6 @@
     "google-antigravity/gemini-3-flash",
     "google-antigravity/gemini-3-pro-high",
     "google-antigravity/gemini-3-pro-low"
-  ]
+  ],
+  "hideThinkingBlock": true
 }
