@@ -6,8 +6,9 @@
   "license": "ISC",
   "author": "jorge",
   "dependencies": {
-    "@mariozechner/pi-ai": "^0.45.3",
-    "@mariozechner/pi-coding-agent": "^0.45.3"
+    "@mariozechner/pi-agent-core": "^0.51.0",
+    "@mariozechner/pi-ai": "^0.51.0",
+    "@mariozechner/pi-coding-agent": "^0.51.0"
   },
   "peerDependencies": {
     "typescript": "^5"
