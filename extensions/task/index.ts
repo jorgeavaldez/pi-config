@@ -412,7 +412,7 @@ export default function (pi: ExtensionAPI) {
 		].join("\n"),
 		parameters: TaskParams,
 
-		async execute(_toolCallId, params, onUpdate, ctx, signal) {
+		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const hasTasks = (params.tasks?.length ?? 0) > 0;
 			const hasSingle = Boolean(params.description);
 

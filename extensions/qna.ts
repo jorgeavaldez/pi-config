@@ -257,7 +257,7 @@ The questions parameter accepts plain text - format them however is clearest (nu
 			}),
 		}),
 
-		async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const timestamp = generateTimestamp();
 			pendingQuestions = { questions: params.questions, timestamp };
 			updateStatusIndicator(ctx);

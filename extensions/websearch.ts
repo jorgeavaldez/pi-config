@@ -147,7 +147,7 @@ Parameters:
 			contextMaxCharacters: Type.Optional(Type.Number({ description: "Max context characters (default: 10000)" })),
 		}),
 
-		async execute(toolCallId, params, onUpdate, ctx, signal) {
+		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			const { query, numResults = 8, type = "auto", livecrawl = "fallback", contextMaxCharacters = 10000 } = params as WebSearchParams;
 
 			// Show searching state
