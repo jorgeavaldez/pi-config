@@ -8,6 +8,8 @@
  * - True fuzzy matching: "remplage" finds "remediation/planner/agent.py"
  * - Case insensitive
  * - Matches against full path
+ * - Includes dotfiles (files/dirs starting with .)
+ * - Respects .gitignore and .ignore files (.ignore takes precedence)
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -39,9 +41,47 @@ export default function (pi: ExtensionAPI) {
     proto.getFuzzyFileSuggestions = function (query: string) {
       if (!this.fdPath) return [];
 
-      // Empty query: use original behavior
+      // Empty query: list all files (with hidden included)
       if (!query || !query.trim()) {
-        return originalFn.call(this, query);
+        try {
+          const result = spawnSync(
+            this.fdPath,
+            [
+              "--base-directory",
+              this.basePath,
+              "--hidden",
+              "--exclude",
+              ".git",
+              "--max-results",
+              "100",
+              "--type",
+              "f",
+              "--type",
+              "d",
+            ],
+            {
+              encoding: "utf-8",
+              stdio: ["pipe", "pipe", "pipe"],
+              maxBuffer: 10 * 1024 * 1024,
+            }
+          );
+
+          if (result.status !== 0 || !result.stdout) return [];
+
+          const lines = result.stdout.trim().split("\n").filter(Boolean);
+
+          return lines.slice(0, 20).map((line) => {
+            const isDir = line.endsWith("/");
+            const path = isDir ? line.slice(0, -1) : line;
+            return {
+              value: `@${line}`,
+              label: basename(path) + (isDir ? "/" : ""),
+              description: path,
+            };
+          });
+        } catch {
+          return originalFn.call(this, query);
+        }
       }
 
       try {
@@ -52,6 +92,9 @@ export default function (pi: ExtensionAPI) {
           [
             "--base-directory",
             this.basePath,
+            "--hidden",
+            "--exclude",
+            ".git",
             "--max-results",
             "100",
             "--type",
