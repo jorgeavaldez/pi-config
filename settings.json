@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.52.0",
+  "lastChangelogVersion": "0.52.5",
   "defaultProvider": "anthropic",
   "defaultModel": "claude-opus-4-6",
   "defaultThinkingLevel": "high",
@@ -7,15 +7,14 @@
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
   "enabledModels": [
-    "anthropic/claude-opus-4-5",
     "openai-codex/gpt-5.2-codex",
     "anthropic/claude-sonnet-4-5",
-    "google-antigravity/claude-opus-4-5-thinking",
     "google-antigravity/claude-sonnet-4-5",
     "google-antigravity/claude-sonnet-4-5-thinking",
     "google-antigravity/gemini-3-flash",
     "google-antigravity/gemini-3-pro-high",
-    "google-antigravity/gemini-3-pro-low"
+    "google-antigravity/gemini-3-pro-low",
+    "anthropic/claude-opus-4-6"
   ],
   "hideThinkingBlock": true
 }
