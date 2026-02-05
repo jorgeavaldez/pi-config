@@ -1,9 +1,9 @@
 {
-  "lastChangelogVersion": "0.52.5",
+  "lastChangelogVersion": "0.52.6",
   "defaultProvider": "anthropic",
   "defaultModel": "claude-opus-4-6",
   "defaultThinkingLevel": "high",
-  "theme": "light",
+  "theme": "dark",
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
   "enabledModels": [

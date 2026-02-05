@@ -5,7 +5,7 @@
 - `AGENTS.md` - global rules (loaded for all sessions)
 - `settings.json` - agent settings
 - `keybindings.json` - custom keybindings
-- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, subagent, task, qna)
+- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, subagent, task, qna, review, jj-status)
 - `skills/` - custom skills (pr-review-comments, resolve-pr-comment, commit)
 - `prompts/` - custom prompts
 - `agents/` - subagent definitions
@@ -66,6 +66,24 @@ Enables the agent to draft clarifying questions and receive user answers via ext
 
 **Tool:** `draft_questions`  
 **Commands:** `/answer`, `/questions`
+
+### review
+
+Code review against a jj bookmark (typically the PR base branch). Auto-detects the nearest ancestor bookmark of the current revision.
+
+**Commands:** `/review [bookmark]`, `/end-review`
+
+- `/review` — finds nearest parent bookmark, diffs against it
+- `/review some-bookmark` — reviews against a specific bookmark
+- `/end-review` — complete review, optionally summarize, and return to original session position
+
+Supports fresh session mode: branches the session tree for an isolated review, then returns with a structured summary.
+
+Requires jj (colocated with git).
+
+### jj-status
+
+Patches the built-in footer to show jj revision info (change ID, bookmarks, description) instead of the git branch. Falls back to git branch when not in a jj repo.
 
 ## Setup
 
