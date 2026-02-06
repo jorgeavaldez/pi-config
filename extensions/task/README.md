@@ -8,6 +8,7 @@ Inspired by Claude Code's Task tool from the Agent SDK, this tool allows the mai
 
 - **General-purpose**: Each task gets full tool access by default (read, bash, edit, write, etc.)
 - **Isolated context**: Each task runs in a separate `pi` process with its own context window
+- **Extension-free subprocesses**: Spawned processes run with `--no-extensions` for clean, fast execution
 - **Parallel execution**: Run up to 10 tasks in parallel (4 concurrent)
 - **Custom prompts**: Optionally provide extra instructions per task
 - **Streaming output**: See tool calls and progress as they happen
@@ -156,10 +157,12 @@ Use **Task** for ad-hoc parallel work. Use **Subagent** for reusable specialized
 - 4 concurrent executions
 - Each task has its own context window (isolated from main and other tasks)
 - Tasks cannot communicate with each other during execution
+- Subprocesses run without extensions (`--no-extensions`) — only built-in tools are available
 
 ## Error Handling
 
 - **Exit code != 0**: Task failed, stderr/output returned
 - **stopReason "error"**: LLM error propagated with message
-- **stopReason "aborted"**: User abort (Ctrl+C) kills all tasks
-- **Partial failures**: Parallel mode continues other tasks, reports individual failures
+- **stopReason "aborted"**: User abort (Ctrl+C) kills all tasks with SIGTERM, escalating to SIGKILL after 5s
+- **Partial failures**: In parallel mode, if one task fails fatally, no new tasks are started; already-running tasks finish naturally
+- **Signal-killed processes**: Processes terminated by signals are correctly reported as failures (exit code 1)

@@ -196,14 +196,22 @@ async function mapWithConcurrencyLimit<TIn, TOut>(
 	const limit = Math.max(1, Math.min(concurrency, items.length));
 	const results: TOut[] = new Array(items.length);
 	let nextIndex = 0;
+	let aborted = false;
 	const workers = new Array(limit).fill(null).map(async () => {
-		while (true) {
+		while (!aborted) {
 			const current = nextIndex++;
 			if (current >= items.length) return;
 			results[current] = await fn(items[current], current);
 		}
 	});
-	await Promise.all(workers);
+	try {
+		await Promise.all(workers);
+	} catch (err) {
+		// One worker threw — prevent remaining workers from starting new tasks.
+		// Already-running tasks will finish naturally (or be killed via the shared signal).
+		aborted = true;
+		throw err;
+	}
 	return results;
 }
 
@@ -243,7 +251,7 @@ async function runSingleAgent(
 		};
 	}
 
-	const args: string[] = ["--mode", "json", "-p", "--no-session"];
+	const args: string[] = ["--mode", "json", "-p", "--no-session", "--no-extensions"];
 	if (agent.model) args.push("--model", agent.model);
 	if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
 
@@ -334,9 +342,10 @@ async function runSingleAgent(
 				currentResult.stderr += data.toString();
 			});
 
-			proc.on("close", (code) => {
+			proc.on("close", (code, sig) => {
 				if (buffer.trim()) processLine(buffer);
-				resolve(code ?? 0);
+				// code is null when killed by signal — treat as non-zero exit
+				resolve(code ?? (sig ? 1 : 0));
 			});
 
 			proc.on("error", () => {
@@ -348,11 +357,21 @@ async function runSingleAgent(
 					wasAborted = true;
 					proc.kill("SIGTERM");
 					setTimeout(() => {
-						if (!proc.killed) proc.kill("SIGKILL");
+						// proc.killed reflects whether kill() was called, not whether
+						// the process actually exited. Use kill(pid, 0) to check liveness.
+						try {
+							process.kill(proc.pid!, 0);
+							proc.kill("SIGKILL");
+						} catch {
+							/* already dead */
+						}
 					}, 5000);
 				};
 				if (signal.aborted) killProc();
-				else signal.addEventListener("abort", killProc, { once: true });
+				else {
+					signal.addEventListener("abort", killProc, { once: true });
+					proc.on("close", () => signal.removeEventListener("abort", killProc));
+				}
 			}
 		});
 
