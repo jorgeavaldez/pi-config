@@ -14,7 +14,9 @@
     "google-antigravity/gemini-3-flash",
     "google-antigravity/gemini-3-pro-high",
     "google-antigravity/gemini-3-pro-low",
-    "anthropic/claude-opus-4-6"
+    "anthropic/claude-opus-4-6",
+    "openai-codex/gpt-5.3-codex",
+    "opencode/kimi-k2.5-free"
   ],
   "hideThinkingBlock": true
 }
