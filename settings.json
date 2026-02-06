@@ -16,7 +16,8 @@
     "google-antigravity/gemini-3-pro-low",
     "anthropic/claude-opus-4-6",
     "openai-codex/gpt-5.3-codex",
-    "opencode/kimi-k2.5-free"
+    "opencode/kimi-k2.5-free",
+    "opencode/kimi-k2.5"
   ],
   "hideThinkingBlock": true
 }
