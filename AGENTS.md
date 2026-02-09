@@ -8,6 +8,14 @@
 
 Only perform git operations when the user EXPLICITLY requests them.
 
+## Source Control Tooling (Prefer jj)
+
+- The user uses Jujutsu (`jj`) for source control.
+- Assume repositories are `jj` + Git colocated repos.
+- Use `jj` for all source-control operations (status, diff, log, bookmark/branch, commit, push, rebase/squash, etc.).
+- Do not use `git` for source-control actions unless the user explicitly requests `git`.
+- When explaining workflows, prefer `jj` terminology and commands.
+
 ## Asking Clarifying Questions
 
 **ALWAYS use the `draft_questions` tool for ALL questions to the user.** Never ask questions directly in your response text — use the tool instead.
