@@ -1,61 +1,126 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { execSync } from "node:child_process";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { dirname, join, resolve } from "node:path";
+
+const execFileAsync = promisify(execFile);
+const REFRESH_MS = 5000;
+const JJ_TEMPLATE =
+  'change_id.short(8) ++ " " ++ if(bookmarks, bookmarks ++ " ", "") ++ if(description, description.first_line(), "(no description)")';
 
 /**
- * Monkeypatches footerData.getGitBranch() to show jj status instead of git branch.
- * The built-in footer renders `~/path (branch)` — we swap the value so it shows
- * `~/path (jj: changeId bookmark desc)`.
- * Falls back to original git branch when not in a jj repo.
+ * Patch built-in footer branch display to show jj status.
  *
- * How: setFooter's factory gives us the footerDataProvider singleton. We patch
- * getGitBranch on it, then immediately restore the built-in footer. The built-in
- * footer uses the same provider object, so it picks up our patch.
+ * Important: footer render paths must stay fast/non-blocking. We therefore:
+ * - never run jj synchronously from getGitBranch()
+ * - return cached status immediately
+ * - refresh cache asynchronously in the background
  */
 export default function (pi: ExtensionAPI) {
   let patched = false;
+  let repoRoot: string | null = null;
+  let cachedStatus: string | null = null;
+  let refreshInFlight: Promise<void> | null = null;
+  let lastRefreshAt = 0;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
 
-  function isJjRepo(): boolean {
-    let dir = process.cwd();
+  function findJjRepoRoot(startCwd: string): string | null {
+    let dir = resolve(startCwd);
     while (true) {
-      if (existsSync(join(dir, ".jj"))) return true;
+      if (existsSync(join(dir, ".jj"))) return dir;
       const parent = dirname(dir);
-      if (parent === dir) return false;
+      if (parent === dir) return null;
       dir = parent;
     }
   }
 
-  function getJjStatus(): string | null {
-    if (!isJjRepo()) return null;
-    try {
-      return execSync(
-        `jj log --no-graph -r @ -T 'change_id.short(8) ++ " " ++ if(bookmarks, bookmarks ++ " ", "") ++ if(description, description.first_line(), "(no description)")'`,
-        { encoding: "utf8", timeout: 3000, stdio: ["pipe", "pipe", "pipe"] }
-      ).trim() || null;
-    } catch {
-      return null;
+  async function refreshStatus(): Promise<void> {
+    if (!repoRoot) return;
+    if (refreshInFlight) return refreshInFlight;
+
+    refreshInFlight = (async () => {
+      try {
+        const { stdout } = await execFileAsync(
+          "jj",
+          ["log", "--no-graph", "-r", "@", "-T", JJ_TEMPLATE],
+          { cwd: repoRoot, timeout: 3000, windowsHide: true },
+        );
+        cachedStatus = stdout.trim() || null;
+      } catch {
+        cachedStatus = null;
+      } finally {
+        lastRefreshAt = Date.now();
+        refreshInFlight = null;
+      }
+    })();
+
+    return refreshInFlight;
+  }
+
+  function scheduleStatusRefresh() {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+
+    if (!repoRoot) return;
+
+    void refreshStatus();
+    intervalId = setInterval(() => {
+      void refreshStatus();
+    }, REFRESH_MS);
+    intervalId.unref?.();
+  }
+
+  function updateRepoContext(cwd: string) {
+    const nextRoot = findJjRepoRoot(cwd);
+    if (nextRoot !== repoRoot) {
+      repoRoot = nextRoot;
+      cachedStatus = null;
+      lastRefreshAt = 0;
+      scheduleStatusRefresh();
     }
   }
 
-  pi.on("session_start", async (_event, ctx) => {
+  function installFooterPatch(ctx: ExtensionContext) {
     if (!ctx.hasUI || patched) return;
 
-    // Briefly set a custom footer just to grab the footerDataProvider reference
     ctx.ui.setFooter((_tui, _theme, footerData) => {
-      // Patch the singleton
       const original = footerData.getGitBranch.bind(footerData);
-      (footerData as any).getGitBranch = () => {
-        const jj = getJjStatus();
-        return jj ? `jj: ${jj}` : original();
-      };
-      patched = true;
 
-      // Return minimal component — gets replaced immediately below
+      (footerData as any).getGitBranch = () => {
+        if (!repoRoot) return original();
+
+        // Opportunistic stale refresh (async, non-blocking)
+        if (Date.now() - lastRefreshAt > REFRESH_MS && !refreshInFlight) {
+          void refreshStatus();
+        }
+
+        return cachedStatus ? `jj: ${cachedStatus}` : original();
+      };
+
+      patched = true;
       return { render: () => [""], invalidate() {} };
     });
 
-    // Restore built-in footer — it uses the same (now patched) footerDataProvider
+    // Restore built-in footer (same provider instance now patched)
     ctx.ui.setFooter(undefined);
+  }
+
+  pi.on("session_start", async (_event, ctx) => {
+    installFooterPatch(ctx);
+    updateRepoContext(ctx.cwd);
+  });
+
+  pi.on("session_switch", async (_event, ctx) => {
+    updateRepoContext(ctx.cwd);
+  });
+
+  pi.on("session_shutdown", () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
   });
 }
