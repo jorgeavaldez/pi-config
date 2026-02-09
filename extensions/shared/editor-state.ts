@@ -149,9 +149,16 @@ export function getEditorOpenMarkers(timestamp: string) {
 
 /**
  * Create a reference + prompt section string.
+ * When reference is null, only the prompt markers are emitted (no reference block).
  */
-export function createEditorOpenSection(reference: string, timestamp: string, prompt = ""): string {
+export function createEditorOpenSection(reference: string | null, timestamp: string, prompt = ""): string {
   const { referenceStart, promptStart, sectionEnd } = getEditorOpenMarkers(timestamp);
+
+  if (reference === null) {
+    return `${promptStart}
+${prompt}
+${sectionEnd}`;
+  }
 
   return `${referenceStart}
 ${reference}
@@ -191,14 +198,20 @@ export function extractEditorOpenPrompt(content: string, timestamp: string): str
 
 /**
  * Verify that the reference section in the file matches what we expect.
- * Returns true if reference markers exist and reference text is unchanged.
+ * When expectedReference is null (no reference block), just verify prompt markers exist.
+ * Otherwise, returns true if reference markers exist and reference text is unchanged.
  */
 export function verifyEditorOpenReference(
   content: string,
   timestamp: string,
-  expectedReference: string
+  expectedReference: string | null
 ): boolean {
   const { referenceStart, promptStart } = getEditorOpenMarkers(timestamp);
+
+  // No reference block expected — just check prompt markers exist
+  if (expectedReference === null) {
+    return content.includes(promptStart);
+  }
 
   const referenceIndex = content.indexOf(referenceStart);
   if (referenceIndex === -1) {

@@ -76,8 +76,9 @@ function extractMessageText(content: unknown): string {
 
 /**
  * Get the latest message text from the current branch, preferring non-tool messages.
+ * Returns null when there are no messages (fresh session).
  */
-function getLastMessageContent(ctx: ExtensionContext): string {
+function getLastMessageContent(ctx: ExtensionContext): string | null {
   const branch = ctx.sessionManager.getBranch();
 
   for (let i = branch.length - 1; i >= 0; i--) {
@@ -97,13 +98,13 @@ function getLastMessageContent(ctx: ExtensionContext): string {
     }
   }
 
-  return "No previous message content available.";
+  return null;
 }
 
 /**
  * Create a temp file for editor-open flow.
  */
-function createTempFile(reference: string, timestamp: string, prefillPrompt: string): {
+function createTempFile(reference: string | null, timestamp: string, prefillPrompt: string): {
   tempFile: string;
   cursorLine: number;
 } {
@@ -112,6 +113,12 @@ function createTempFile(reference: string, timestamp: string, prefillPrompt: str
 
   const content = createEditorOpenSection(reference, timestamp, prefillPrompt) + "\n";
   writeFileSync(tempFile, content, "utf-8");
+
+  if (reference === null) {
+    // No reference block: <!-- PROMPT --> on line 1, cursor on line 2
+    const cursorLine = 2;
+    return { tempFile, cursorLine };
+  }
 
   const referenceLines = reference.split("\n").length;
   const cursorLine = 1 + referenceLines + 2;
@@ -124,16 +131,18 @@ function createTempFile(reference: string, timestamp: string, prefillPrompt: str
  */
 function prependSectionToFile(
   filepath: string,
-  reference: string,
+  reference: string | null,
   timestamp: string,
   prefillPrompt: string
 ): number {
   const section = createEditorOpenSection(reference, timestamp, prefillPrompt);
-  const referenceLines = reference.split("\n").length;
+  // When no reference, section is just: PROMPT marker + prompt + END marker (3 lines)
+  // Cursor goes to line 2 (the prompt line) relative to section start
+  const sectionCursorOffset = reference === null ? 2 : (1 + reference.split("\n").length + 2);
 
   if (!existsSync(filepath)) {
     writeFileSync(filepath, section + "\n\n", "utf-8");
-    return 1 + referenceLines + 2;
+    return sectionCursorOffset;
   }
 
   const content = readFileSync(filepath, "utf-8");
@@ -156,7 +165,7 @@ function prependSectionToFile(
   if (frontmatterEndLine === -1) {
     const newContent = `${section}\n\n${content}`;
     writeFileSync(filepath, newContent, "utf-8");
-    return 1 + referenceLines + 2;
+    return sectionCursorOffset;
   }
 
   const beforeFrontmatter = lines.slice(0, frontmatterEndLine + 1);
@@ -166,7 +175,8 @@ function prependSectionToFile(
   const newLines = [...beforeFrontmatter, "", ...sectionLines, "", ...afterFrontmatter];
   writeFileSync(filepath, newLines.join("\n"), "utf-8");
 
-  return frontmatterEndLine + 5 + referenceLines;
+  // frontmatterEndLine is 0-indexed; +2 for 1-indexing and blank line after frontmatter; then cursor offset within section
+  return frontmatterEndLine + 2 + sectionCursorOffset;
 }
 
 function cleanupTempFile(tempFile: string): void {
