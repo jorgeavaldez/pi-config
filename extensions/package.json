@@ -5,12 +5,10 @@
   "description": "",
   "license": "ISC",
   "author": "jorge",
-  "dependencies": {
-    "@mariozechner/pi-agent-core": "^0.51.0",
-    "@mariozechner/pi-ai": "^0.51.0",
-    "@mariozechner/pi-coding-agent": "^0.51.0"
-  },
   "peerDependencies": {
+    "@mariozechner/pi-agent-core": "*",
+    "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-coding-agent": "*",
     "typescript": "^5"
   },
   "devDependencies": {
