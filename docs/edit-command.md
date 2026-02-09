@@ -166,15 +166,13 @@ The editor opens with cursor positioned on the blank line between start and end 
 
 This ensures only the specific section created by the current `/edit` invocation is extracted—never old content from previous sections.
 
-## Integration with Q&A Extension
+## Integration with `editor-open` Extension
 
-The edit-prompt extension shares its active file state with the qna extension via `extensions/shared/editor-state.ts`. When `/edit` sets an active file:
+The edit-prompt extension shares its active file state with `editor-open` via `extensions/shared/editor-state.ts`.
 
-- The qna extension's `/answer` command will append Q&A sections to that file instead of creating a temp file
-- Q&A history is preserved in the file alongside prompts
-- Both use HTML comment delimiters with timestamps
+When `/edit` has set an active file, pressing `Ctrl+G` (handled by `editor-open`) prepends a reference+prompt section into that same file instead of using a temporary file.
 
-See [docs/qna.md](qna.md) for Q&A extension details.
+See [docs/editor-open.md](editor-open.md) for delimiter format and extraction behavior.
 
 ## Configuration
 

@@ -5,7 +5,7 @@
 - `AGENTS.md` - global rules (loaded for all sessions)
 - `settings.json` - agent settings
 - `keybindings.json` - custom keybindings
-- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, subagent, task, qna, review, jj-status)
+- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, editor-open, subagent, task, review, jj-status)
 - `skills/` - custom skills (pr-review-comments, resolve-pr-comment, commit)
 - `prompts/` - custom prompts
 - `agents/` - subagent definitions
@@ -60,12 +60,18 @@ Two modes in file selector (toggle with `Ctrl+R`):
 
 Uses `$EDITOR` → `$VISUAL` → nvim → vim → vi fallback chain.
 
-### qna
+### editor-open
 
-Enables the agent to draft clarifying questions and receive user answers via external editor. Integrates with edit-prompt (uses active file if set, otherwise temp file).
+Adds a custom `Ctrl+G` workflow for drafting prompts in your editor with reference context.
 
-**Tool:** `draft_questions`  
-**Commands:** `/answer`, `/questions`
+Behavior:
+- Always includes the **last message content** as a reference section
+- Adds a separate prompt section delimited by HTML comments
+- Extracts and sends only the prompt section after save/quit
+- If `/edit` has set an active file, prepends the section there (after frontmatter)
+- Otherwise uses a temporary file
+
+`keybindings.json` sets `externalEditor` to `[]`, so `Ctrl+G` is handled by this extension instead of pi's built-in external editor action.
 
 ### review
 

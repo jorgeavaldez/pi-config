@@ -1,6 +1,7 @@
 ## Asking Questions
 
-**ALWAYS use the `draft_questions` tool for ALL questions to the user.** Never ask questions directly in your response text — use the tool instead.
+Ask clarifying questions directly in chat when needed.
+If multiple clarifications are required, ask them in one concise message.
 
 ## Source Control Preference (Jujutsu)
 

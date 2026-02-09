@@ -1,23 +1,17 @@
 {
-  "lastChangelogVersion": "0.52.7",
-  "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-4-6",
+  "lastChangelogVersion": "0.52.9",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.3-codex",
   "defaultThinkingLevel": "high",
   "theme": "dark",
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
   "enabledModels": [
-    "openai-codex/gpt-5.2-codex",
     "anthropic/claude-sonnet-4-5",
-    "google-antigravity/claude-sonnet-4-5",
-    "google-antigravity/claude-sonnet-4-5-thinking",
-    "google-antigravity/gemini-3-flash",
-    "google-antigravity/gemini-3-pro-high",
-    "google-antigravity/gemini-3-pro-low",
     "anthropic/claude-opus-4-6",
-    "openai-codex/gpt-5.3-codex",
     "opencode/kimi-k2.5-free",
-    "opencode/kimi-k2.5"
+    "opencode/kimi-k2.5",
+    "openai-codex/gpt-5.3-codex"
   ],
-  "hideThinkingBlock": true
+  "hideThinkingBlock": false
 }

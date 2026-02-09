@@ -6,5 +6,6 @@
   "cursorWordLeft": ["alt+left", "alt+b"],
   "cursorWordRight": ["alt+right", "alt+w"],
   "deleteCharBackward": ["backspace", "ctrl+h"],
-  "deleteWordBackward": ["ctrl+w", "alt+backspace"]
+  "deleteWordBackward": ["ctrl+w", "alt+backspace"],
+  "externalEditor": []
 }

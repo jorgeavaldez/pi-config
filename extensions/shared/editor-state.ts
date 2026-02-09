@@ -2,10 +2,10 @@
  * Shared Editor State and Utilities
  *
  * Provides shared state and utilities for extensions that work with
- * external editors and the Obsidian vault prompt files.
+ * external editors and prompt files.
  */
 
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import type { TUI, Component } from "@mariozechner/pi-tui";
 import { spawnSync } from "node:child_process";
 
@@ -86,7 +86,7 @@ export function getEditorArgs(filePath: string, cursorLine?: number): string[] {
 export async function openInEditor(
   filepath: string,
   cursorLine: number | undefined,
-  ctx: ExtensionCommandContext
+  ctx: ExtensionContext
 ): Promise<number | null> {
   const editor = getEditor();
   const editorArgs = getEditorArgs(filepath, cursorLine);
@@ -133,43 +133,43 @@ export function generateTimestamp(): string {
 }
 
 // =============================================================================
-// Q&A Section Utilities
+// Editor-open Section Utilities
 // =============================================================================
 
 /**
- * Build the Q&A section markers for a given timestamp.
+ * Build reference/prompt section markers for a given timestamp.
  */
-export function getQnaMarkers(timestamp: string) {
+export function getEditorOpenMarkers(timestamp: string) {
   return {
-    questionsStart: `<!-- QUESTIONS: ${timestamp} -->`,
-    answersStart: `<!-- ANSWERS: ${timestamp} -->`,
-    sectionEnd: `<!-- /QUESTIONS: ${timestamp} -->`,
+    referenceStart: `<!-- REFERENCE: ${timestamp} -->`,
+    promptStart: `<!-- PROMPT: ${timestamp} -->`,
+    sectionEnd: `<!-- /REFERENCE: ${timestamp} -->`,
   };
 }
 
 /**
- * Create a Q&A section string with the given questions.
+ * Create a reference + prompt section string.
  */
-export function createQnaSection(questions: string, timestamp: string): string {
-  const { questionsStart, answersStart, sectionEnd } = getQnaMarkers(timestamp);
+export function createEditorOpenSection(reference: string, timestamp: string, prompt = ""): string {
+  const { referenceStart, promptStart, sectionEnd } = getEditorOpenMarkers(timestamp);
 
-  return `${questionsStart}
-${questions}
-${answersStart}
-
+  return `${referenceStart}
+${reference}
+${promptStart}
+${prompt}
 ${sectionEnd}`;
 }
 
 /**
- * Extract the answers from a Q&A section identified by timestamp.
- * Returns the text between <!-- ANSWERS: TIMESTAMP --> and <!-- /QUESTIONS: TIMESTAMP -->.
- * Returns null if markers are missing or malformed.
+ * Extract the prompt from a reference/prompt section identified by timestamp.
+ * Returns the text between <!-- PROMPT: TIMESTAMP --> and <!-- /REFERENCE: TIMESTAMP -->.
+ * Returns null if markers are missing/malformed or if prompt is empty after trim.
  */
-export function extractQnaAnswers(content: string, timestamp: string): string | null {
-  const { answersStart, sectionEnd } = getQnaMarkers(timestamp);
+export function extractEditorOpenPrompt(content: string, timestamp: string): string | null {
+  const { promptStart, sectionEnd } = getEditorOpenMarkers(timestamp);
 
-  const answersIndex = content.indexOf(answersStart);
-  if (answersIndex === -1) {
+  const promptIndex = content.indexOf(promptStart);
+  if (promptIndex === -1) {
     return null;
   }
 
@@ -178,41 +178,45 @@ export function extractQnaAnswers(content: string, timestamp: string): string | 
     return null;
   }
 
-  const contentStart = answersIndex + answersStart.length;
+  const contentStart = promptIndex + promptStart.length;
 
-  // Validate: end must come after answers start
+  // Validate: end must come after prompt start
   if (endIndex <= contentStart) {
     return null;
   }
 
-  const answers = content.slice(contentStart, endIndex).trim();
-  return answers || null;
+  const prompt = content.slice(contentStart, endIndex).trim();
+  return prompt || null;
 }
 
 /**
- * Verify that the questions in the file match what we expect.
- * Returns true if the questions section exists and contains the expected questions.
+ * Verify that the reference section in the file matches what we expect.
+ * Returns true if reference markers exist and reference text is unchanged.
  */
-export function verifyQnaQuestions(content: string, timestamp: string, expectedQuestions: string): boolean {
-  const { questionsStart, answersStart } = getQnaMarkers(timestamp);
+export function verifyEditorOpenReference(
+  content: string,
+  timestamp: string,
+  expectedReference: string
+): boolean {
+  const { referenceStart, promptStart } = getEditorOpenMarkers(timestamp);
 
-  const questionsIndex = content.indexOf(questionsStart);
-  if (questionsIndex === -1) {
+  const referenceIndex = content.indexOf(referenceStart);
+  if (referenceIndex === -1) {
     return false;
   }
 
-  const answersIndex = content.indexOf(answersStart);
-  if (answersIndex === -1) {
+  const promptIndex = content.indexOf(promptStart);
+  if (promptIndex === -1) {
     return false;
   }
 
-  const contentStart = questionsIndex + questionsStart.length;
+  const contentStart = referenceIndex + referenceStart.length;
 
   // Validate order
-  if (answersIndex <= contentStart) {
+  if (promptIndex <= contentStart) {
     return false;
   }
 
-  const actualQuestions = content.slice(contentStart, answersIndex).trim();
-  return actualQuestions === expectedQuestions.trim();
+  const actualReference = content.slice(contentStart, promptIndex).trim();
+  return actualReference === expectedReference.trim();
 }
