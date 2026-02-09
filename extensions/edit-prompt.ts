@@ -551,8 +551,8 @@ tags: []
  */
 function prepareFile(filepath: string): { cursorLine: number; timestamp: string } {
   const timestamp = generateTimestamp();
-  const startMarker = `<!-- prompt: ${timestamp} -->`;
-  const endMarker = `<!-- prompt-end: ${timestamp} -->`;
+  const startMarker = `<!-- PROMPT: ${timestamp} -->`;
+  const endMarker = `<!-- PROMPT-END: ${timestamp} -->`;
 
   if (!existsSync(filepath)) {
     const content = `${generateFrontmatter(filepath)}
@@ -570,9 +570,9 @@ ${endMarker}
     // 4: tags: []
     // 5: ---
     // 6: (blank)
-    // 7: <!-- prompt: ... -->
+    // 7: <!-- PROMPT: ... -->
     // 8: (blank) <-- cursor here
-    // 9: <!-- prompt-end: ... -->
+    // 9: <!-- PROMPT-END: ... -->
     // 10: (blank)
     return { cursorLine: 8, timestamp };
   }
@@ -623,7 +623,7 @@ ${endMarker}
 
 /**
  * Extract the content of a specific prompt section identified by timestamp.
- * Returns the text between <!-- prompt: TIMESTAMP --> and <!-- prompt-end: TIMESTAMP -->.
+ * Returns the text between <!-- PROMPT: TIMESTAMP --> and <!-- PROMPT-END: TIMESTAMP -->.
  * Returns empty string if either marker is missing or end comes before start.
  */
 function extractSection(filepath: string, timestamp: string): string {
@@ -634,8 +634,8 @@ function extractSection(filepath: string, timestamp: string): string {
   const content = readFileSync(filepath, "utf-8");
 
   // Build exact marker strings for this timestamp
-  const startMarker = `<!-- prompt: ${timestamp} -->`;
-  const endMarker = `<!-- prompt-end: ${timestamp} -->`;
+  const startMarker = `<!-- PROMPT: ${timestamp} -->`;
+  const endMarker = `<!-- PROMPT-END: ${timestamp} -->`;
 
   const startIndex = content.indexOf(startMarker);
   if (startIndex === -1) {
