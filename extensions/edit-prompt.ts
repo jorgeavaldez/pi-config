@@ -35,6 +35,8 @@ import {
   clearActiveEditFile,
   openInEditor,
   generateTimestamp,
+  insertSectionAfterFrontmatter,
+  extractBetweenMarkers,
 } from "./shared/editor-state.js";
 import { getPromptsDir, expandTilde } from "./shared/settings-utils.js";
 
@@ -399,7 +401,7 @@ class FileSelectDialog extends Container implements Focusable {
     }
   }
 
-  render(width: number): string[] {
+  override render(width: number): string[] {
     const lines: string[] = [];
     const theme = this.theme;
 
@@ -551,74 +553,19 @@ tags: []
  */
 function prepareFile(filepath: string): { cursorLine: number; timestamp: string } {
   const timestamp = generateTimestamp();
-  const startMarker = `<!-- PROMPT: ${timestamp} -->`;
-  const endMarker = `<!-- PROMPT-END: ${timestamp} -->`;
+  const section = `<!-- PROMPT: ${timestamp} -->\n\n<!-- PROMPT-END: ${timestamp} -->`;
+  // Cursor targets the blank line between markers (line 2 of the section, offset 1)
+  const cursorOffsetInSection = 1;
 
   if (!existsSync(filepath)) {
-    const content = `${generateFrontmatter(filepath)}
-
-${startMarker}
-
-${endMarker}
-
-`;
+    const content = `${generateFrontmatter(filepath)}\n\n${section}\n\n`;
     writeFileSync(filepath, content, "utf-8");
-    // Line numbers (1-indexed):
-    // 1: ---
-    // 2: id: ...
-    // 3: aliases: []
-    // 4: tags: []
-    // 5: ---
-    // 6: (blank)
-    // 7: <!-- PROMPT: ... -->
-    // 8: (blank) <-- cursor here
-    // 9: <!-- PROMPT-END: ... -->
-    // 10: (blank)
-    return { cursorLine: 8, timestamp };
+    // Frontmatter is 5 lines (--- id aliases tags ---), then blank, then section starts at line 7
+    return { cursorLine: 7 + cursorOffsetInSection, timestamp };
   }
 
-  const content = readFileSync(filepath, "utf-8");
-  const lines = content.split("\n");
-
-  // Find end of frontmatter (second '---')
-  let frontmatterEndLine = -1;
-  let dashCount = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line !== undefined && line.trim() === "---") {
-      dashCount++;
-      if (dashCount === 2) {
-        frontmatterEndLine = i;
-        break;
-      }
-    }
-  }
-
-  if (frontmatterEndLine === -1) {
-    // No frontmatter found - prepend at start (shouldn't happen with our files)
-    const newContent = `${startMarker}\n\n${endMarker}\n\n${content}`;
-    writeFileSync(filepath, newContent, "utf-8");
-    return { cursorLine: 2, timestamp };
-  }
-
-  // Insert new section after frontmatter
-  const beforeFrontmatter = lines.slice(0, frontmatterEndLine + 1);
-  const afterFrontmatter = lines.slice(frontmatterEndLine + 1);
-
-  // Build new content: frontmatter, blank, start marker, blank (cursor), end marker, blank, old content
-  const newLines = [...beforeFrontmatter, "", startMarker, "", endMarker, "", ...afterFrontmatter];
-
-  writeFileSync(filepath, newLines.join("\n"), "utf-8");
-
-  // Cursor position calculation:
-  // frontmatterEndLine is 0-indexed, nvim lines are 1-indexed
-  // frontmatter ends at line (frontmatterEndLine + 1) in 1-indexed
-  // blank line: frontmatterEndLine + 2
-  // start marker: frontmatterEndLine + 3
-  // cursor (blank line after start marker): frontmatterEndLine + 4
-  // end marker: frontmatterEndLine + 5
-  // blank line: frontmatterEndLine + 6
-  return { cursorLine: frontmatterEndLine + 4, timestamp };
+  const sectionStart = insertSectionAfterFrontmatter(filepath, section);
+  return { cursorLine: sectionStart + cursorOffsetInSection, timestamp };
 }
 
 /**
@@ -632,29 +579,7 @@ function extractSection(filepath: string, timestamp: string): string {
   }
 
   const content = readFileSync(filepath, "utf-8");
-
-  // Build exact marker strings for this timestamp
-  const startMarker = `<!-- PROMPT: ${timestamp} -->`;
-  const endMarker = `<!-- PROMPT-END: ${timestamp} -->`;
-
-  const startIndex = content.indexOf(startMarker);
-  if (startIndex === -1) {
-    return "";
-  }
-
-  const endIndex = content.indexOf(endMarker);
-  if (endIndex === -1) {
-    return "";
-  }
-
-  const contentStart = startIndex + startMarker.length;
-
-  // Validate: end must come after start
-  if (endIndex <= contentStart) {
-    return "";
-  }
-
-  return content.slice(contentStart, endIndex).trim();
+  return extractBetweenMarkers(content, `<!-- PROMPT: ${timestamp} -->`, `<!-- PROMPT-END: ${timestamp} -->`) ?? "";
 }
 
 

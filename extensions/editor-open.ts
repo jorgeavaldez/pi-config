@@ -17,6 +17,7 @@ import {
   createEditorOpenSection,
   extractEditorOpenPrompt,
   generateTimestamp,
+  insertSectionAfterFrontmatter,
   openInEditor,
   verifyEditorOpenReference,
 } from "./shared/editor-state.js";
@@ -138,45 +139,15 @@ function prependSectionToFile(
   const section = createEditorOpenSection(reference, timestamp, prefillPrompt);
   // When no reference, section is just: PROMPT marker + prompt + END marker (3 lines)
   // Cursor goes to line 2 (the prompt line) relative to section start
-  const sectionCursorOffset = reference === null ? 2 : (1 + reference.split("\n").length + 2);
+  const cursorOffsetInSection = reference === null ? 1 : (reference.split("\n").length + 2);
 
   if (!existsSync(filepath)) {
     writeFileSync(filepath, section + "\n\n", "utf-8");
-    return sectionCursorOffset;
+    return 1 + cursorOffsetInSection;
   }
 
-  const content = readFileSync(filepath, "utf-8");
-  const lines = content.split("\n");
-
-  // Find end of frontmatter (second '---')
-  let frontmatterEndLine = -1;
-  let dashCount = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line !== undefined && line.trim() === "---") {
-      dashCount++;
-      if (dashCount === 2) {
-        frontmatterEndLine = i;
-        break;
-      }
-    }
-  }
-
-  if (frontmatterEndLine === -1) {
-    const newContent = `${section}\n\n${content}`;
-    writeFileSync(filepath, newContent, "utf-8");
-    return sectionCursorOffset;
-  }
-
-  const beforeFrontmatter = lines.slice(0, frontmatterEndLine + 1);
-  const afterFrontmatter = lines.slice(frontmatterEndLine + 1);
-  const sectionLines = section.split("\n");
-
-  const newLines = [...beforeFrontmatter, "", ...sectionLines, "", ...afterFrontmatter];
-  writeFileSync(filepath, newLines.join("\n"), "utf-8");
-
-  // frontmatterEndLine is 0-indexed; +2 for 1-indexing and blank line after frontmatter; then cursor offset within section
-  return frontmatterEndLine + 2 + sectionCursorOffset;
+  const sectionStart = insertSectionAfterFrontmatter(filepath, section);
+  return sectionStart + cursorOffsetInSection;
 }
 
 function cleanupTempFile(tempFile: string): void {
