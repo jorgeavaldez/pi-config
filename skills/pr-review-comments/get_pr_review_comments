@@ -29,9 +29,15 @@ get_github_repo_info() {
     # Get the remote URL for origin
     local remote_url
     if ! remote_url=$(git remote get-url origin 2>/dev/null); then
-        log_error "Failed to get git remote URL for 'origin'"
-        log_error "Make sure you're in a git repository with a remote named 'origin'"
-        exit 1
+        # Fallback: try jj git remote list (for non-colocated jj workspaces)
+        if [ "$IS_JJ" = true ]; then
+            remote_url=$(jj git remote list 2>/dev/null | awk '$1 == "origin" { print $2 }')
+        fi
+        if [ -z "$remote_url" ]; then
+            log_error "Failed to get remote URL for 'origin'"
+            log_error "Make sure you're in a git/jj repository with a remote named 'origin'"
+            exit 1
+        fi
     fi
 
     log_info "Remote URL: $remote_url"
@@ -86,7 +92,8 @@ get_current_branch() {
             branch=$(jj log -r @-- --no-graph -T 'bookmarks' 2>/dev/null)
         fi
         # jj may return multiple bookmarks or decorations — take the first one
-        branch=$(echo "$branch" | head -1 | sed 's/[[:space:]]*$//')
+        # Strip trailing markers like * (modified) and whitespace
+        branch=$(echo "$branch" | head -1 | sed 's/[*[:space:]]*$//')
     else
         branch=$(git branch --show-current)
     fi
@@ -95,7 +102,13 @@ get_current_branch() {
 }
 
 # Function to check if current branch has a PR
+# Args: $1 = owner/repo (for -R flag, needed in non-colocated jj workspaces)
 get_current_pr() {
+    local gh_repo_flag=()
+    if [ -n "${1:-}" ]; then
+        gh_repo_flag=(-R "$1")
+    fi
+
     local current_branch
     current_branch=$(get_current_branch)
 
@@ -110,7 +123,7 @@ get_current_pr() {
     log_info "Checking for PR on branch: $current_branch"
 
     local pr_info
-    if ! pr_info=$(gh pr list -s all --head "$current_branch" --json number --jq '.[0].number' 2>/dev/null); then
+    if ! pr_info=$(gh pr list "${gh_repo_flag[@]}" -s all --head "$current_branch" --json number --jq '.[0].number' 2>/dev/null); then
         log_error "Failed to query GitHub PR. Make sure 'gh' is authenticated."
         exit 1
     fi
@@ -184,7 +197,7 @@ main() {
 
     # Get current PR number
     local pr_number
-    pr_number=$(get_current_pr)
+    pr_number=$(get_current_pr "$repo_owner/$repo_name")
     log_info "Found PR #$pr_number"
 
     # Create temporary directory for processing
