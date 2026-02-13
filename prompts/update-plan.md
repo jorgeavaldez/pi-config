@@ -1,15 +1,27 @@
 ---
 description: Update plan file status
 ---
-update the plan file with a summary of the changes you made.
+update the plan file to reflect the work you just completed.
 
-update the current status section to reflect where things stand now — what's done, what's in progress, what's blocked, and what's next.
+this is a TARGETED update, not an append-only dump.
+the plan must stay concise and useful as a handoff document — if it balloons with noise, it loses its value as directed context for agents and humans coming up to speed.
 
-update the progress checklist — check off completed items and add any new deliverables that emerged.
+guidelines for what to change:
 
-update the plan with any new cascading changes, assumptions (validated or new), updates to the contracts, or differences from the original details included.
-if later phases or steps were affected by significant drift in your implementation, update those phases or steps accordingly.
+- **current status section**: update to reflect where things stand now — what's done, what's in progress, what's blocked, and what's next.
+- **progress checklist**: check off completed items. add new deliverables ONLY if they are real work items, not just things you happened to touch.
+- **completed phases**: do NOT rewrite or pad completed phase details. they serve as a record of what was done. if you discovered something important during implementation, add a brief note — don't restructure the section.
+- **upcoming phases**: if your work caused meaningful drift (changed contracts, shifted dependencies, invalidated assumptions), surgically update the affected details in those phases. do NOT rewrite phases you didn't affect.
+- **cascading changes**: if a contract, interface, or assumption changed, update the specific line where it's referenced. don't duplicate the information in a new section.
+- **new context**: if you learned something that a future implementer needs to know, add it in the most relevant existing section — near the phase or contract it relates to. avoid creating new top-level sections unless there's genuinely no home for the information.
 
-provide any guidance, notes, or feedback that may be useful for the implementer of the remaining phases.
+what NOT to do:
+- do NOT append a big "changes from phase N" narrative section at the bottom.
+- do NOT duplicate information that already exists in the plan.
+- do NOT add verbose commentary or implementation journals — keep it factual and terse.
+- do NOT pad sections with filler. if nothing changed in a section, leave it alone.
+- do NOT grow the plan. if you're adding lines, ask yourself whether you're also removing or tightening lines elsewhere to compensate.
 
-do not remove or rewrite completed phase details — they serve as a record of what was done and why.
+provide any guidance, notes, or feedback that may be useful for the implementer of the remaining phases — but do it inline where relevant, not as a separate block.
+
+the goal: after your update, the plan should read as if it was always written this way. clean, integrated, no seams.
