@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.52.9",
-  "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-4-6",
+  "lastChangelogVersion": "0.52.10",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.3-codex",
   "defaultThinkingLevel": "high",
   "theme": "dark",
   "promptsDir": "~/obsidian/delvaze/prompts",
@@ -11,7 +11,8 @@
     "anthropic/claude-opus-4-6",
     "opencode/kimi-k2.5-free",
     "opencode/kimi-k2.5",
-    "openai-codex/gpt-5.3-codex"
+    "openai-codex/gpt-5.3-codex",
+    "openai-codex/gpt-5.3-codex-spark"
   ],
   "hideThinkingBlock": false
 }
