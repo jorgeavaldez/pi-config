@@ -11,15 +11,20 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
+const SUPPORTED_TERMINALS = ["WezTerm"];
+
 /**
  * Send a desktop notification via OSC 777 escape sequence.
+ * Writes to stderr to avoid corrupting stdout-based protocols (RPC, JSON mode).
  */
 function notify(title: string, body: string): void {
 	// OSC 777 format: ESC ] 777 ; notify ; title ; body BEL
-	process.stdout.write(`\x1b]777;notify;${title};${body}\x07`);
+	process.stderr.write(`\x1b]777;notify;${title};${body}\x07`);
 }
 
 export default function (pi: ExtensionAPI) {
+	const term = process.env.TERM_PROGRAM ?? "";
+	if (!SUPPORTED_TERMINALS.includes(term)) return;
 	// Notify when agent finishes and is ready for input
 	pi.on("agent_end", async () => {
 		notify("pi", "Ready for input");
