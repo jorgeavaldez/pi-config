@@ -186,6 +186,94 @@ function getDisplayItems(messages: Message[]): DisplayItem[] {
 	return items;
 }
 
+function truncateLine(text: string, max = 140): string {
+	return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+function formatToolCallPlain(toolName: string, args: Record<string, unknown>): string {
+	const shortenPath = (p: string) => {
+		const home = os.homedir();
+		return p.startsWith(home) ? `~${p.slice(home.length)}` : p;
+	};
+
+	switch (toolName) {
+		case "bash": {
+			const command = (args.command as string) || "...";
+			return `$ ${truncateLine(command, 100)}`;
+		}
+		case "read": {
+			const rawPath = (args.file_path || args.path || "...") as string;
+			const offset = args.offset as number | undefined;
+			const limit = args.limit as number | undefined;
+			let text = `read ${shortenPath(rawPath)}`;
+			if (offset !== undefined || limit !== undefined) {
+				const startLine = offset ?? 1;
+				const endLine = limit !== undefined ? startLine + limit - 1 : "";
+				text += `:${startLine}${endLine ? `-${endLine}` : ""}`;
+			}
+			return text;
+		}
+		case "write": {
+			const rawPath = (args.file_path || args.path || "...") as string;
+			const content = (args.content || "") as string;
+			const lines = content.split("\n").length;
+			return `write ${shortenPath(rawPath)}${lines > 1 ? ` (${lines} lines)` : ""}`;
+		}
+		case "edit": {
+			const rawPath = (args.file_path || args.path || "...") as string;
+			return `edit ${shortenPath(rawPath)}`;
+		}
+		default: {
+			const argsStr = JSON.stringify(args);
+			const preview = argsStr.length > 70 ? `${argsStr.slice(0, 70)}...` : argsStr;
+			return `${toolName} ${preview}`;
+		}
+	}
+}
+
+function renderDisplayItemsPlain(items: DisplayItem[], maxItems = 5): string {
+	const toShow = items.slice(-maxItems);
+	const skipped = items.length > maxItems ? items.length - maxItems : 0;
+	const lines: string[] = [];
+
+	if (skipped > 0) lines.push(`... ${skipped} earlier items`);
+
+	for (const item of toShow) {
+		if (item.type === "toolCall") {
+			lines.push(`→ ${formatToolCallPlain(item.name, item.args)}`);
+			continue;
+		}
+
+		const textLines = item.text
+			.split("\n")
+			.map((line) => line.trim())
+			.filter(Boolean)
+			.slice(0, 3)
+			.map((line) => truncateLine(line));
+		if (textLines.length > 0) lines.push(...textLines);
+	}
+
+	return lines.join("\n");
+}
+
+function renderTaskResultPlain(result: TaskResult, maxItems = 5): string {
+	const icon =
+		result.exitCode === -1 ? "⏳" : result.exitCode === 0 && result.stopReason !== "error" && result.stopReason !== "aborted" ? "✓" : "✗";
+	const header = `[${result.id}] ${icon} ${truncateLine(result.description, 90)}`;
+	const displayItems = getDisplayItems(result.messages);
+	const body = renderDisplayItemsPlain(displayItems, maxItems);
+
+	if (body) return `${header}\n${body}`;
+	return `${header}\n${result.exitCode === -1 ? "(running...)" : "(no output)"}`;
+}
+
+function renderParallelProgressPlain(results: TaskResult[]): string {
+	const running = results.filter((r) => r.exitCode === -1).length;
+	const done = results.length - running;
+	const blocks = results.map((r) => renderTaskResultPlain(r, 3));
+	return `Tasks: ${done}/${results.length} done, ${running} running...\n\n${blocks.join("\n\n")}`;
+}
+
 async function mapWithConcurrencyLimit<TIn, TOut>(
 	items: TIn[],
 	concurrency: number,
@@ -263,7 +351,7 @@ async function runTask(
 	const emitUpdate = () => {
 		if (onUpdate) {
 			onUpdate({
-				content: [{ type: "text", text: getFinalOutput(currentResult.messages) || "(running...)" }],
+				content: [{ type: "text", text: renderTaskResultPlain(currentResult, 8) }],
 				details: makeDetails([currentResult]),
 			});
 		}
@@ -502,10 +590,8 @@ export default function (pi: ExtensionAPI) {
 
 				const emitParallelUpdate = () => {
 					if (onUpdate) {
-						const running = allResults.filter((r) => r.exitCode === -1).length;
-						const done = allResults.filter((r) => r.exitCode !== -1).length;
 						onUpdate({
-							content: [{ type: "text", text: `Tasks: ${done}/${allResults.length} done, ${running} running...` }],
+							content: [{ type: "text", text: renderParallelProgressPlain(allResults) }],
 							details: makeDetails("parallel")([...allResults]),
 						});
 					}
@@ -536,17 +622,12 @@ export default function (pi: ExtensionAPI) {
 				});
 
 				const successCount = results.filter((r) => r.exitCode === 0).length;
-				const summaries = results.map((r) => {
-					const output = getFinalOutput(r.messages);
-					const preview = output.slice(0, 200) + (output.length > 200 ? "..." : "");
-					return `[Task ${r.id}] ${r.exitCode === 0 ? "✓" : "✗"}: ${r.description}\n${preview || "(no output)"}`;
-				});
 
 				return {
 					content: [
 						{
 							type: "text",
-							text: `Parallel execution: ${successCount}/${results.length} succeeded\n\n${summaries.join("\n\n")}`,
+							text: `Parallel execution: ${successCount}/${results.length} succeeded\n\n${renderParallelProgressPlain(results)}`,
 						},
 					],
 					details: makeDetails("parallel")(results),
@@ -579,7 +660,7 @@ export default function (pi: ExtensionAPI) {
 				}
 
 				return {
-					content: [{ type: "text", text: getFinalOutput(result.messages) || "(no output)" }],
+					content: [{ type: "text", text: renderTaskResultPlain(result, 10) }],
 					details: makeDetails("single")([result]),
 				};
 			}
