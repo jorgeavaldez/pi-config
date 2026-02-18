@@ -13,7 +13,7 @@
  */
 
 import { complete, type Message } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, SessionEntry } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, SessionEntry } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader, convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
 
 const SYSTEM_PROMPT = `You are a context transfer assistant. Given a conversation history and the user's goal for a new thread, generate a focused prompt that:
@@ -37,6 +37,41 @@ Files involved:
 
 ## Task
 [Clear description of what to do next based on user's goal]`;
+
+async function generateHandoffPrompt(
+	ctx: ExtensionCommandContext,
+	conversationText: string,
+	goal: string,
+	signal?: AbortSignal,
+): Promise<string | null> {
+	const apiKey = await ctx.modelRegistry.getApiKey(ctx.model!);
+
+	const userMessage: Message = {
+		role: "user",
+		content: [
+			{
+				type: "text",
+				text: `## Conversation History\n\n${conversationText}\n\n## User's Goal for New Thread\n\n${goal}`,
+			},
+		],
+		timestamp: Date.now(),
+	};
+
+	const response = await complete(
+		ctx.model!,
+		{ systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
+		{ apiKey, signal },
+	);
+
+	if (response.stopReason === "aborted") {
+		return null;
+	}
+
+	return response.content
+		.filter((c): c is { type: "text"; text: string } => c.type === "text")
+		.map((c) => c.text)
+		.join("\n");
+}
 
 export default function (pi: ExtensionAPI) {
 	pi.registerCommand("handoff", {
@@ -74,44 +109,17 @@ export default function (pi: ExtensionAPI) {
 			const conversationText = serializeConversation(llmMessages);
 			const currentSessionFile = ctx.sessionManager.getSessionFile();
 
-			// Generate the handoff prompt with loader UI
-			const result = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
+			let generationFailed = false;
+
+			// Interactive/TUI path: use custom loader UI
+			let result: string | null | undefined = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
 				const loader = new BorderedLoader(tui, theme, `Generating handoff prompt...`);
 				loader.onAbort = () => done(null);
 
-				const doGenerate = async () => {
-					const apiKey = await ctx.modelRegistry.getApiKey(ctx.model!);
-
-					const userMessage: Message = {
-						role: "user",
-						content: [
-							{
-								type: "text",
-								text: `## Conversation History\n\n${conversationText}\n\n## User's Goal for New Thread\n\n${goal}`,
-							},
-						],
-						timestamp: Date.now(),
-					};
-
-					const response = await complete(
-						ctx.model!,
-						{ systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
-						{ apiKey, signal: loader.signal },
-					);
-
-					if (response.stopReason === "aborted") {
-						return null;
-					}
-
-					return response.content
-						.filter((c): c is { type: "text"; text: string } => c.type === "text")
-						.map((c) => c.text)
-						.join("\n");
-				};
-
-				doGenerate()
+				generateHandoffPrompt(ctx, conversationText, goal, loader.signal)
 					.then(done)
 					.catch((err) => {
+						generationFailed = true;
 						console.error("Handoff generation failed:", err);
 						done(null);
 					});
@@ -119,8 +127,27 @@ export default function (pi: ExtensionAPI) {
 				return loader;
 			});
 
-			if (result === null) {
-				ctx.ui.notify("Cancelled", "info");
+			// RPC fallback: custom() is unsupported and returns undefined
+			if (result === undefined) {
+				ctx.ui.setStatus("handoff", "Generating handoff prompt...");
+
+				try {
+					result = await generateHandoffPrompt(ctx, conversationText, goal);
+				} catch (err) {
+					generationFailed = true;
+					console.error("Handoff generation failed:", err);
+					result = null;
+				} finally {
+					ctx.ui.setStatus("handoff", undefined);
+				}
+			}
+
+			if (result === null || result === undefined) {
+				if (generationFailed) {
+					ctx.ui.notify("Failed to generate handoff prompt", "error");
+				} else {
+					ctx.ui.notify("Cancelled", "info");
+				}
 				return;
 			}
 
