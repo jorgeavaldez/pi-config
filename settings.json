@@ -9,10 +9,11 @@
   "enabledModels": [
     "anthropic/claude-sonnet-4-5",
     "anthropic/claude-opus-4-6",
-    "opencode/kimi-k2.5-free",
     "opencode/kimi-k2.5",
     "openai-codex/gpt-5.3-codex",
-    "openai-codex/gpt-5.3-codex-spark"
+    "openai-codex/gpt-5.3-codex-spark",
+    "opencode/glm-5",
+    "opencode/glm-5-free"
   ],
   "hideThinkingBlock": false
 }
