@@ -1,15 +1,15 @@
 /**
  * Code Review Extension (jj-native)
  *
- * Provides a `/review` command that reviews code changes against a parent bookmark.
+ * Provides a `/review` command that reviews code changes from parent bookmark to current revision.
  * Assumes jj colocated with git.
  *
  * Usage:
- * - `/review` - review against nearest ancestor bookmark (e.g. main)
+ * - `/review` - review using parent-bookmark-to-current revset
  * - `/review some-bookmark` - review against a specific bookmark
  */
 
-import type { ExtensionAPI, ExtensionContext, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { existsSync } from "node:fs";
@@ -18,8 +18,10 @@ import { join, dirname } from "node:path";
 // Fresh session review state (module-level — one active review at a time)
 let reviewOriginId: string | undefined = undefined;
 
+const DEFAULT_DIFF_REVSET = 'heads(trunk()::@- & (remote_bookmarks() | bookmarks()))::@';
+
 const REVIEW_PROMPT =
-	"Review the code changes against bookmark '{bookmark}'. Run `jj diff --from {bookmark}` to inspect the changes. Provide prioritized, actionable findings.";
+	"Review the code changes using this exact diff command: `{diffCommand}`. If no bookmark argument is provided, this range should represent parent bookmark → current revision, even when `@` itself has no bookmark. Provide prioritized, actionable findings.";
 
 const REVIEW_RUBRIC = `# Review Guidelines
 
@@ -133,31 +135,16 @@ function isJjRepo(): boolean {
 	}
 }
 
-/**
- * Find the nearest ancestor bookmark of the current revision
- */
-async function getParentBookmark(pi: ExtensionAPI): Promise<string | null> {
-	const { stdout, code } = await pi.exec("jj", [
-		"log",
-		"--no-graph",
-		"-r", "ancestors(@) & bookmarks()",
-		"-T", "bookmarks.join(\",\") ++ \"\\n\"",
-		"-n", "1",
-	]);
-
-	if (code !== 0 || !stdout.trim()) return null;
-
-	// Take the first bookmark if the revision has multiple
-	const firstLine = stdout.trim().split("\n")[0];
-	const firstBookmark = firstLine.split(",")[0]?.trim();
-	return firstBookmark || null;
-}
-
 export default function reviewExtension(pi: ExtensionAPI) {
 	/**
 	 * Execute the review
 	 */
-	async function executeReview(ctx: ExtensionCommandContext, bookmark: string, useFreshSession: boolean): Promise<void> {
+	async function executeReview(
+		ctx: ExtensionCommandContext,
+		reviewLabel: string,
+		diffCommand: string,
+		useFreshSession: boolean,
+	): Promise<void> {
 		if (reviewOriginId) {
 			ctx.ui.notify("Already in a review. Use /end-review to finish first.", "warning");
 			return;
@@ -204,18 +191,18 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			});
 		}
 
-		const prompt = REVIEW_PROMPT.replace(/{bookmark}/g, bookmark);
+		const prompt = REVIEW_PROMPT.replace(/{diffCommand}/g, diffCommand);
 		const fullPrompt = `${REVIEW_RUBRIC}\n\n---\n\nPlease perform a code review with the following focus:\n\n${prompt}`;
 
 		const modeHint = useFreshSession ? " (fresh session)" : "";
-		ctx.ui.notify(`Starting review against '${bookmark}'${modeHint}`, "info");
+		ctx.ui.notify(`Starting review for ${reviewLabel}${modeHint}`, "info");
 
 		pi.sendUserMessage(fullPrompt);
 	}
 
 	// /review [bookmark]
 	pi.registerCommand("review", {
-		description: "Review code changes against a parent bookmark",
+		description: "Review code changes from parent bookmark to current revision",
 		handler: async (args, ctx) => {
 			if (!ctx.hasUI) {
 				ctx.ui.notify("Review requires interactive mode", "error");
@@ -232,16 +219,13 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			// Determine bookmark: explicit arg or auto-detect
-			let bookmark = args?.trim() || null;
-
-			if (!bookmark) {
-				bookmark = await getParentBookmark(pi);
-				if (!bookmark) {
-					ctx.ui.notify("No ancestor bookmark found for current revision", "error");
-					return;
-				}
-			}
+			const explicitBookmark = args?.trim() || null;
+			const diffCommand = explicitBookmark
+				? `jj diff --from ${explicitBookmark}`
+				: `jj diff -r "${DEFAULT_DIFF_REVSET}"`;
+			const reviewLabel = explicitBookmark
+				? `bookmark '${explicitBookmark}'`
+				: "parent bookmark → current revision";
 
 			// Determine fresh session mode
 			const entries = ctx.sessionManager.getEntries();
@@ -258,7 +242,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				useFreshSession = choice === "Empty branch";
 			}
 
-			await executeReview(ctx, bookmark, useFreshSession);
+			await executeReview(ctx, reviewLabel, diffCommand, useFreshSession);
 		},
 	});
 
