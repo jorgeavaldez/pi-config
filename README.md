@@ -5,7 +5,7 @@
 - `AGENTS.md` - global rules (loaded for all sessions)
 - `settings.json` - agent settings
 - `keybindings.json` - custom keybindings
-- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, editor-open, subagent, task, review, jj-status)
+- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, editor-open, subagent, task, review, jj-footer)
 - `skills/` - custom skills (pr-review-comments, resolve-pr-comment, commit)
 - `prompts/` - custom prompts
 - `agents/` - subagent definitions
@@ -87,9 +87,11 @@ Supports fresh session mode: branches the session tree for an isolated review, t
 
 Requires jj (colocated with git).
 
-### jj-status
+### jj-footer
 
-Patches the built-in footer to show jj revision info (change ID, bookmarks, description) instead of the git branch. Falls back to git branch when not in a jj repo.
+Reimplements the default footer and swaps the branch segment to show jj revision info (change ID, bookmarks, description), with fallback to the built-in git branch logic.
+
+Enabled by default. Toggle with `/jj-footer` (`on`, `off`, `toggle`, `status`).
 
 ## Setup
 
