@@ -7,8 +7,29 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const REFRESH_MS = 5000;
+const JJ_SEPARATOR = "\x1f";
+const JJ_STATUS_REVSET = 'heads(fork_point(@ | trunk())::@ & (immutable() | (remote_bookmarks() | bookmarks())))::@';
 const JJ_TEMPLATE =
-	'change_id.short(8) ++ " " ++ if(bookmarks, bookmarks ++ " ", "") ++ if(description, description.first_line(), "(no description)")';
+	`change_id.short(8) ++ "${JJ_SEPARATOR}" ++ bookmarks.map(|b| b.name()).join(",") ++ "${JJ_SEPARATOR}" ++ remote_bookmarks.map(|b| b.name()).join(",") ++ "${JJ_SEPARATOR}" ++ if(description, description.first_line(), "") ++ "${JJ_SEPARATOR}" ++ empty ++ "\\n"`;
+
+type JjRevisionRow = {
+	changeId: string;
+	localBookmarks: string[];
+	remoteBookmarks: string[];
+	description: string | null;
+	empty: boolean;
+};
+
+type JjStatusInfo = {
+	current: JjRevisionRow;
+	anchorLabel: string;
+	anchorUsesBookmark: boolean;
+	distance: number;
+};
+
+type FooterTheme = {
+	fg: (color: any, text: string) => string;
+};
 
 /**
  * Sanitize text for display in a single-line status.
@@ -32,10 +53,126 @@ function formatTokens(count: number): string {
 	return `${Math.round(count / 1000000)}M`;
 }
 
+function dedupe(values: string[]): string[] {
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const value of values) {
+		if (seen.has(value)) continue;
+		seen.add(value);
+		out.push(value);
+	}
+	return out;
+}
+
+function parseBookmarkList(text: string): string[] {
+	if (!text) return [];
+	return dedupe(
+		text
+			.split(",")
+			.map((value) => sanitizeStatusText(value))
+			.filter(Boolean),
+	);
+}
+
+function parseJjRevisionLine(line: string): JjRevisionRow | null {
+	const parts = line.split(JJ_SEPARATOR);
+	if (parts.length !== 5) return null;
+
+	const changeIdRaw = parts[0] ?? "";
+	const localBookmarksRaw = parts[1] ?? "";
+	const remoteBookmarksRaw = parts[2] ?? "";
+	const descriptionRaw = parts[3] ?? "";
+	const emptyRaw = parts[4] ?? "";
+
+	const changeId = sanitizeStatusText(changeIdRaw);
+	if (!changeId) return null;
+
+	const description = sanitizeStatusText(descriptionRaw);
+	const emptyFlag = sanitizeStatusText(emptyRaw);
+
+	return {
+		changeId,
+		localBookmarks: parseBookmarkList(localBookmarksRaw),
+		remoteBookmarks: parseBookmarkList(remoteBookmarksRaw),
+		description: description || null,
+		empty: emptyFlag === "true",
+	};
+}
+
+function parseJjStatus(stdout: string): JjStatusInfo | null {
+	const rows = stdout
+		.split(/\r?\n/)
+		.map((line) => line.trim())
+		.filter(Boolean)
+		.map(parseJjRevisionLine)
+		.filter((row): row is JjRevisionRow => row !== null);
+
+	const current = rows[0];
+	const anchor = rows.at(-1);
+	if (!current || !anchor) return null;
+
+	const anchorBookmarks = anchor.localBookmarks.length > 0 ? anchor.localBookmarks : anchor.remoteBookmarks;
+	const anchorUsesBookmark = anchorBookmarks.length > 0;
+	const anchorLabel = anchorUsesBookmark ? anchorBookmarks.join(",") : anchor.changeId;
+
+	return {
+		current,
+		anchorLabel,
+		anchorUsesBookmark,
+		distance: Math.max(rows.length - 1, 0),
+	};
+}
+
+function getJjStatusFingerprint(status: JjStatusInfo | null): string | null {
+	if (!status) return null;
+	return [
+		status.current.changeId,
+		status.current.localBookmarks.join(","),
+		status.current.remoteBookmarks.join(","),
+		status.current.description ?? "",
+		status.current.empty ? "1" : "0",
+		status.anchorLabel,
+		status.anchorUsesBookmark ? "1" : "0",
+		status.distance.toString(),
+	].join("|");
+}
+
+function formatJjStatus(theme: FooterTheme, status: JjStatusInfo): { plain: string; styled: string } {
+	const currentBookmarks = status.current.localBookmarks.join(",");
+	const description = status.current.description;
+
+	let currentInnerPlain = status.current.changeId;
+	if (currentBookmarks) currentInnerPlain += ` ${currentBookmarks}`;
+	if (description) currentInnerPlain += `: ${description}`;
+
+	const starPlain = status.current.empty ? "" : "*";
+	const anchorSuffixPlain = status.distance > 0 ? `~${status.distance}` : "";
+	const plain = `@: (${currentInnerPlain})${starPlain} (${status.anchorLabel}${anchorSuffixPlain})`;
+
+	const prefixStyled = `${theme.fg("muted", "@:")} `;
+	const currentOpenStyled = theme.fg("dim", "(");
+	const currentChangeStyled = theme.fg("accent", status.current.changeId);
+	const currentBookmarksStyled = currentBookmarks ? ` ${theme.fg("success", currentBookmarks)}` : "";
+	const currentDescriptionStyled = description ? theme.fg("dim", `: ${description}`) : "";
+	const currentCloseStyled = theme.fg("dim", ")");
+	const starStyled = status.current.empty ? "" : theme.fg("warning", "*");
+
+	const anchorOpenStyled = theme.fg("dim", "(");
+	const anchorLabelStyled = status.anchorUsesBookmark
+		? theme.fg("success", status.anchorLabel)
+		: theme.fg("accent", status.anchorLabel);
+	const anchorDistanceStyled = status.distance > 0 ? theme.fg("muted", `~${status.distance}`) : "";
+	const anchorCloseStyled = theme.fg("dim", ")");
+
+	const styled = `${prefixStyled}${currentOpenStyled}${currentChangeStyled}${currentBookmarksStyled}${currentDescriptionStyled}${currentCloseStyled}${starStyled} ${anchorOpenStyled}${anchorLabelStyled}${anchorDistanceStyled}${anchorCloseStyled}`;
+
+	return { plain, styled };
+}
+
 export default function (pi: ExtensionAPI) {
 	let enabled = true;
 	let repoRoot: string | null = null;
-	let cachedStatus: string | null = null;
+	let cachedStatus: JjStatusInfo | null = null;
 	let refreshInFlight: Promise<void> | null = null;
 	let lastRefreshAt = 0;
 	let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -97,14 +234,14 @@ export default function (pi: ExtensionAPI) {
 		if (refreshInFlight) return refreshInFlight;
 
 		refreshInFlight = (async () => {
-			const previous = cachedStatus;
+			const previousFingerprint = getJjStatusFingerprint(cachedStatus);
 			try {
 				const { stdout } = await execFileAsync(
 					"jj",
-					["log", "--no-graph", "-r", "@", "-T", JJ_TEMPLATE],
+					["log", "--no-graph", "-r", JJ_STATUS_REVSET, "-T", JJ_TEMPLATE],
 					{ cwd: repoRoot, timeout: 3000, windowsHide: true },
 				);
-				cachedStatus = stdout.trim() || null;
+				cachedStatus = parseJjStatus(stdout);
 			} catch {
 				cachedStatus = null;
 			} finally {
@@ -112,7 +249,7 @@ export default function (pi: ExtensionAPI) {
 				refreshInFlight = null;
 			}
 
-			if (cachedStatus !== previous) {
+			if (getJjStatusFingerprint(cachedStatus) !== previousFingerprint) {
 				requestRender?.();
 			}
 		})();
@@ -203,39 +340,33 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					// Replace home directory with ~
-					let pwd = process.cwd();
+					let cwdDisplay = process.cwd();
 					const home = process.env.HOME || process.env.USERPROFILE;
-					if (home && pwd.startsWith(home)) {
-						pwd = `~${pwd.slice(home.length)}`;
+					if (home && cwdDisplay.startsWith(home)) {
+						cwdDisplay = `~${cwdDisplay.slice(home.length)}`;
 					}
+
+					let headerLine = theme.fg("dim", cwdDisplay);
 
 					// Branch segment: jj status first, built-in git branch fallback
 					if (repoRoot && Date.now() - lastRefreshAt > REFRESH_MS && !refreshInFlight) {
 						void refreshStatus();
 					}
 					const fallbackBranch = footerData.getGitBranch();
-					const branch = repoRoot && cachedStatus ? `jj: ${cachedStatus}` : fallbackBranch;
-					if (branch) {
-						pwd = `${pwd} (${branch})`;
+					if (repoRoot && cachedStatus) {
+						const branch = formatJjStatus(theme, cachedStatus);
+						headerLine += ` ${branch.styled}`;
+					} else if (fallbackBranch) {
+						headerLine += ` ${theme.fg("muted", `(${fallbackBranch})`)}`;
 					}
 
 					// Add session name if set
 					const sessionName = ctx.sessionManager.getSessionName();
 					if (sessionName) {
-						pwd = `${pwd} • ${sessionName}`;
+						headerLine += theme.fg("dim", ` • ${sessionName}`);
 					}
 
-					// Truncate path if too long to fit width
-					if (pwd.length > width) {
-						const half = Math.floor(width / 2) - 2;
-						if (half > 1) {
-							const start = pwd.slice(0, half);
-							const end = pwd.slice(-(half - 1));
-							pwd = `${start}...${end}`;
-						} else {
-							pwd = pwd.slice(0, Math.max(1, width));
-						}
-					}
+					headerLine = truncateToWidth(headerLine, width, theme.fg("dim", "..."));
 
 					// Build stats line
 					const statsParts: string[] = [];
@@ -324,7 +455,7 @@ export default function (pi: ExtensionAPI) {
 					const remainder = statsLine.slice(statsLeft.length);
 					const dimRemainder = theme.fg("dim", remainder);
 
-					const lines = [theme.fg("dim", pwd), dimStatsLeft + dimRemainder];
+					const lines = [headerLine, dimStatsLeft + dimRemainder];
 
 					// Add extension statuses on a single line, sorted by key alphabetically
 					const extensionStatuses = footerData.getExtensionStatuses();
