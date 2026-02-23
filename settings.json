@@ -1,9 +1,9 @@
 {
-  "lastChangelogVersion": "0.54.0",
+  "lastChangelogVersion": "0.54.2",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.3-codex",
-  "defaultThinkingLevel": "high",
-  "theme": "dark",
+  "defaultThinkingLevel": "medium",
+  "theme": "light",
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
   "enabledModels": [
