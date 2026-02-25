@@ -632,7 +632,7 @@ export default function editPromptExtension(pi: ExtensionAPI) {
   pi.registerCommand("edit", {
     description: "Edit a prompt file in your editor and execute it",
     handler: async (_args, ctx) => {
-      const PROMPTS_DIR = getPromptsDir();
+      const PROMPTS_DIR = getPromptsDir(ctx.cwd);
 
       // 1. Check UI availability
       if (!ctx.hasUI) {

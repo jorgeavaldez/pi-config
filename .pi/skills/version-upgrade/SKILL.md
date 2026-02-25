@@ -35,7 +35,10 @@ between the old and new versions — not just breaking changes, but also fixes, 
 features, and behavioral changes that may interact with custom extensions.
 
 ```bash
-cat "$(node -e "console.log(require.resolve('@mariozechner/pi-coding-agent/package.json'))" | sed 's/package.json//')CHANGELOG.md"
+PI_BIN="$(which pi)"
+PI_CLI_PATH="$(node -e "const fs=require('fs'); console.log(fs.realpathSync(process.argv[1]))" "$PI_BIN")"
+PI_PACKAGE_ROOT="$(node -e "const path=require('path'); console.log(path.dirname(path.dirname(process.argv[1])))" "$PI_CLI_PATH")"
+cat "$PI_PACKAGE_ROOT/CHANGELOG.md"
 ```
 
 Extract every entry between the new version and the old version (inclusive of the new,

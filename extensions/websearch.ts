@@ -32,8 +32,8 @@ interface WebSearchDetails {
 	originalLines?: number;
 }
 
-async function performSearch(params: WebSearchParams, signal?: AbortSignal): Promise<string> {
-	const EXA_MCP_ENDPOINT = getExaMcpEndpoint();
+async function performSearch(params: WebSearchParams, cwd: string, signal?: AbortSignal): Promise<string> {
+	const EXA_MCP_ENDPOINT = getExaMcpEndpoint(cwd);
 	const request = {
 		jsonrpc: "2.0",
 		id: 1,
@@ -163,7 +163,7 @@ Parameters:
 			});
 
 			try {
-				let result = await performSearch({ query, numResults, type, livecrawl, contextMaxCharacters }, signal);
+				let result = await performSearch({ query, numResults, type, livecrawl, contextMaxCharacters }, ctx.cwd, signal);
 
 				// Apply truncation if needed
 				const truncation = truncateHead(result, {
@@ -229,7 +229,8 @@ Parameters:
 			}
 
 			// Error state
-			if (result.isError) {
+			const isErrorResult = (result as { isError?: boolean }).isError === true;
+			if (isErrorResult) {
 				const errorText = result.content?.[0]?.type === "text" ? result.content[0].text : "Unknown error";
 				return new Text(theme.fg("error", `✗ ${errorText}`), 0, 0);
 			}

@@ -1,19 +1,22 @@
 /**
  * Custom Settings Utilities
  *
- * Reads custom extension settings from ~/.pi/agent/settings.json
- * with tilde expansion and sensible defaults.
+ * Reads custom extension settings from scoped SettingsManager settings
+ * (project + global) with project-over-global precedence.
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { SettingsManager } from "@mariozechner/pi-coding-agent";
 import { homedir } from "node:os";
 import { join } from "node:path";
-
-const SETTINGS_PATH = join(homedir(), ".pi", "agent", "settings.json");
 
 interface CustomSettings {
   promptsDir?: string;
   exaMcpEndpoint?: string;
+}
+
+interface RawCustomSettings {
+  promptsDir?: unknown;
+  exaMcpEndpoint?: unknown;
 }
 
 // Sensible defaults
@@ -21,6 +24,13 @@ const DEFAULTS: Required<CustomSettings> = {
   promptsDir: "~/.pi/prompts",
   exaMcpEndpoint: "https://mcp.exa.ai/mcp",
 };
+
+function normalizeCustomSettings(settings: RawCustomSettings): CustomSettings {
+  return {
+    promptsDir: typeof settings.promptsDir === "string" ? settings.promptsDir : undefined,
+    exaMcpEndpoint: typeof settings.exaMcpEndpoint === "string" ? settings.exaMcpEndpoint : undefined,
+  };
+}
 
 /**
  * Expand ~ to home directory
@@ -36,15 +46,19 @@ export function expandTilde(path: string): string {
 }
 
 /**
- * Load custom settings from settings.json
+ * Load custom settings with project-over-global precedence.
  */
-function loadCustomSettings(): CustomSettings {
-  if (!existsSync(SETTINGS_PATH)) {
-    return {};
-  }
+function loadCustomSettings(cwd: string): CustomSettings {
   try {
-    const content = readFileSync(SETTINGS_PATH, "utf-8");
-    return JSON.parse(content) as CustomSettings;
+    const settingsManager = SettingsManager.create(cwd);
+
+    const projectSettings = normalizeCustomSettings(settingsManager.getProjectSettings() as RawCustomSettings);
+    const globalSettings = normalizeCustomSettings(settingsManager.getGlobalSettings() as RawCustomSettings);
+
+    return {
+      promptsDir: projectSettings.promptsDir ?? globalSettings.promptsDir,
+      exaMcpEndpoint: projectSettings.exaMcpEndpoint ?? globalSettings.exaMcpEndpoint,
+    };
   } catch {
     return {};
   }
@@ -53,8 +67,8 @@ function loadCustomSettings(): CustomSettings {
 /**
  * Get the prompts directory (with tilde expansion)
  */
-export function getPromptsDir(): string {
-  const settings = loadCustomSettings();
+export function getPromptsDir(cwd: string): string {
+  const settings = loadCustomSettings(cwd);
   const dir = settings.promptsDir ?? DEFAULTS.promptsDir;
   return expandTilde(dir);
 }
@@ -62,7 +76,7 @@ export function getPromptsDir(): string {
 /**
  * Get the Exa MCP endpoint URL
  */
-export function getExaMcpEndpoint(): string {
-  const settings = loadCustomSettings();
+export function getExaMcpEndpoint(cwd: string): string {
+  const settings = loadCustomSettings(cwd);
   return settings.exaMcpEndpoint ?? DEFAULTS.exaMcpEndpoint;
 }
