@@ -15,6 +15,7 @@
 import { complete, type Message } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionCommandContext, SessionEntry } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader, convertToLlm, serializeConversation } from "@mariozechner/pi-coding-agent";
+import { editTextExternally } from "./shared/editor-state.js";
 
 const SYSTEM_PROMPT = `You are a context transfer assistant. Given a conversation history and the user's goal for a new thread, generate a focused prompt that:
 
@@ -151,11 +152,19 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			// Let user edit the generated prompt
-			const editedPrompt = await ctx.ui.editor("Edit handoff prompt", result);
+			// Let user edit the generated prompt via the shared external editor flow.
+			const editedPrompt = await editTextExternally(result, ctx, {
+				tempFilePrefix: "pi-handoff-",
+				cursorLine: 1,
+			});
 
 			if (editedPrompt === undefined) {
 				ctx.ui.notify("Cancelled", "info");
+				return;
+			}
+
+			if (editedPrompt === null) {
+				ctx.ui.notify("Failed to edit handoff prompt", "error");
 				return;
 			}
 

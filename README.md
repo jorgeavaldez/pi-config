@@ -5,8 +5,9 @@
 - `AGENTS.md` - global rules (loaded for all sessions)
 - `settings.json` - agent settings
 - `keybindings.json` - custom keybindings
-- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, editor-open, subagent, task, review, jj-footer)
+- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, editor-open, editor-env, subagent, task, review, jj-footer)
 - `skills/` - custom skills (pr-review-comments, resolve-pr-comment, commit)
+- `PI_NVIM_RPC.md` - external editor rpc runbook/troubleshooting
 - `prompts/` - custom prompts
 - `agents/` - subagent definitions
 
@@ -72,6 +73,16 @@ Behavior:
 - Otherwise uses a temporary file
 
 `keybindings.json` sets `externalEditor` to `[]`, so `Ctrl+G` is handled by this extension instead of pi's built-in external editor action.
+
+### pi ↔ nvim rpc flow
+
+`editor-env` sets `EDITOR`/`VISUAL` to `~/.config/nvim/bin/pi-nvim-editor` when available.
+
+This gives `/handoff`, `/edit`, and `Ctrl+G` a deterministic host-aware external edit path:
+- if pi runs inside nvim `:terminal`, edits open in the host nvim
+- otherwise it falls back to local nvim
+
+For caveats and debugging steps, see `PI_NVIM_RPC.md`.
 
 ### review
 
