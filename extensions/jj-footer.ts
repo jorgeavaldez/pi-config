@@ -238,7 +238,7 @@ export default function (pi: ExtensionAPI) {
 			try {
 				const { stdout } = await execFileAsync(
 					"jj",
-					["log", "--no-graph", "-r", JJ_STATUS_REVSET, "-T", JJ_TEMPLATE],
+					["log", "--ignore-working-copy", "--no-graph", "-r", JJ_STATUS_REVSET, "-T", JJ_TEMPLATE],
 					{ cwd: repoRoot, timeout: 3000, windowsHide: true },
 				);
 				cachedStatus = parseJjStatus(stdout);
