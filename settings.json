@@ -1,7 +1,6 @@
 {
-  "lastChangelogVersion": "0.55.0",
+  "lastChangelogVersion": "0.55.1",
   "defaultThinkingLevel": "xhigh",
-  "theme": "dark",
   "theme": "light",
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
@@ -12,5 +11,7 @@
     "openai-codex/gpt-5.3-codex",
     "opencode/glm-5"
   ],
-  "hideThinkingBlock": false
+  "hideThinkingBlock": false,
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.3-codex"
 }
