@@ -1,9 +1,8 @@
 {
   "lastChangelogVersion": "0.55.0",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.3-codex",
   "defaultThinkingLevel": "xhigh",
   "theme": "dark",
+  "theme": "light",
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
   "enabledModels": [
@@ -11,7 +10,6 @@
     "anthropic/claude-opus-4-6",
     "opencode/kimi-k2.5",
     "openai-codex/gpt-5.3-codex",
-    "openai-codex/gpt-5.3-codex-spark",
     "opencode/glm-5"
   ],
   "hideThinkingBlock": false
