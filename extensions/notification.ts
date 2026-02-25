@@ -1,30 +1,106 @@
 /**
- * WezTerm Notification Extension
+ * Notification Extension
  *
- * Sends desktop notifications via OSC 777 escape sequence when:
- * - Agent finishes and is ready for input
- * - Permission is requested for dangerous operations
- *
- * Supported terminals: Ghostty, iTerm2, WezTerm, rxvt-unicode
- * Not supported: Kitty (uses OSC 99), Terminal.app, Windows Terminal, Alacritty
+ * Notification backend priority (checked once at module load):
+ * 1) Pi Agent.app (if installed)
+ * 2) osascript (native macOS notifications)
+ * 3) OSC 777 in WezTerm
+ * 4) no-op
  */
 
+import { existsSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { join } from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-const SUPPORTED_TERMINALS = ["WezTerm"];
+type NotifyFn = (title: string, body: string) => void;
 
-/**
- * Send a desktop notification via OSC 777 escape sequence.
- * Writes to stderr to avoid corrupting stdout-based protocols (RPC, JSON mode).
- */
-function notify(title: string, body: string): void {
-	// OSC 777 format: ESC ] 777 ; notify ; title ; body BEL
-	process.stderr.write(`\x1b]777;notify;${title};${body}\x07`);
+const APP_BUNDLE_NAME = "Pi Agent.app";
+const APP_PATH_CANDIDATES = [
+	`/Applications/${APP_BUNDLE_NAME}`,
+	process.env.HOME ? `${process.env.HOME}/Applications/${APP_BUNDLE_NAME}` : null,
+].filter((path): path is string => path !== null);
+
+function findCommand(command: string): string | null {
+	try {
+		const result = spawnSync("which", [command], {
+			encoding: "utf-8",
+			timeout: 1000,
+		});
+		if (result.status !== 0) return null;
+		const path = result.stdout.trim();
+		return path.length > 0 ? path : null;
+	} catch {
+		return null;
+	}
 }
 
+function spawnDetached(command: string, args: string[]): void {
+	try {
+		const child = spawn(command, args, {
+			detached: true,
+			stdio: "ignore",
+		});
+		child.on("error", () => {});
+		child.unref();
+	} catch {
+		// Ignore notification delivery failures.
+	}
+}
+
+function resolveNotifier(): NotifyFn {
+	const appBundlePath = APP_PATH_CANDIDATES.find((path) => existsSync(path));
+	const osascriptPath = findCommand("osascript");
+
+	if (appBundlePath && osascriptPath) {
+		return (title, body) => {
+			// Matches the known-working invocation:
+			// osascript /Applications/Pi\ Agent.app "message" "title"
+			spawnDetached(osascriptPath, [appBundlePath, body, title]);
+		};
+	}
+
+	if (appBundlePath) {
+		const appletPath = join(appBundlePath, "Contents", "MacOS", "applet");
+		if (existsSync(appletPath)) {
+			return (title, body) => {
+				spawnDetached(appletPath, [body, title]);
+			};
+		}
+	}
+
+	if (osascriptPath) {
+		return (title, body) => {
+			spawnDetached(osascriptPath, [
+				"-e",
+				"on run argv",
+				"-e",
+				"set msg to item 1 of argv",
+				"-e",
+				"set ttl to item 2 of argv",
+				"-e",
+				"display notification msg with title ttl",
+				"-e",
+				"end run",
+				"--",
+				body,
+				title,
+			]);
+		};
+	}
+
+	if (process.env.TERM_PROGRAM === "WezTerm") {
+		return (title, body) => {
+			process.stderr.write(`\x1b]777;notify;${title};${body}\x07`);
+		};
+	}
+
+	return () => {};
+}
+
+const notify = resolveNotifier();
+
 export default function (pi: ExtensionAPI) {
-	const term = process.env.TERM_PROGRAM ?? "";
-	if (!SUPPORTED_TERMINALS.includes(term)) return;
 	// Notify when agent finishes and is ready for input
 	pi.on("agent_end", async () => {
 		notify("pi", "Ready for input");
