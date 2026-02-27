@@ -4,6 +4,9 @@ auth.json
 # Private - session history
 sessions/
 
+# Private - skills
+private-skills/
+
 # Dependencies - regenerate with: cd extensions && npm install
 extensions/node_modules/
 
