@@ -1,19 +1,21 @@
 {
-  "lastChangelogVersion": "0.55.1",
-  "defaultThinkingLevel": "xhigh",
+  "lastChangelogVersion": "0.56.3",
+  "defaultThinkingLevel": "high",
   "theme": "light",
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
   "enabledModels": [
-    "anthropic/claude-sonnet-4-5",
     "anthropic/claude-opus-4-6",
     "opencode/kimi-k2.5",
     "openai-codex/gpt-5.3-codex",
-    "opencode/glm-5"
+    "opencode/glm-5",
+    "openai-codex/gpt-5.3-codex-spark",
+    "anthropic/claude-sonnet-4-6",
+    "openai-codex/gpt-5.4"
   ],
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.3-codex",
+  "defaultModel": "gpt-5.4",
   "skills": [
     "./skills/",
     "./private-skills/"
