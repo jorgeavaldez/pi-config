@@ -406,8 +406,7 @@ export default function (pi: ExtensionAPI) {
 
 					// If statsLeft is too wide, truncate it
 					if (statsLeftWidth > width) {
-						const plainStatsLeft = statsLeft.replace(/\x1b\[[0-9;]*m/g, "");
-						statsLeft = `${plainStatsLeft.substring(0, width - 3)}...`;
+						statsLeft = truncateToWidth(statsLeft, width, "...");
 						statsLeftWidth = visibleWidth(statsLeft);
 					}
 
@@ -440,11 +439,11 @@ export default function (pi: ExtensionAPI) {
 						statsLine = statsLeft + padding + rightSide;
 					} else {
 						const availableForRight = width - statsLeftWidth - minPadding;
-						if (availableForRight > 3) {
-							const plainRightSide = rightSide.replace(/\x1b\[[0-9;]*m/g, "");
-							const truncatedPlain = plainRightSide.substring(0, availableForRight);
-							const padding = " ".repeat(width - statsLeftWidth - truncatedPlain.length);
-							statsLine = statsLeft + padding + truncatedPlain;
+						if (availableForRight > 0) {
+							const truncatedRight = truncateToWidth(rightSide, availableForRight, "");
+							const truncatedRightWidth = visibleWidth(truncatedRight);
+							const padding = " ".repeat(Math.max(0, width - statsLeftWidth - truncatedRightWidth));
+							statsLine = statsLeft + padding + truncatedRight;
 						} else {
 							statsLine = statsLeft;
 						}

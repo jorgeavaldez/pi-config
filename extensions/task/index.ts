@@ -652,11 +652,7 @@ export default function (pi: ExtensionAPI) {
 				const isError = result.exitCode !== 0 || result.stopReason === "error" || result.stopReason === "aborted";
 				if (isError) {
 					const errorMsg = result.errorMessage || result.stderr || getFinalOutput(result.messages) || "(no output)";
-					return {
-						content: [{ type: "text", text: `Task ${result.stopReason || "failed"}: ${errorMsg}` }],
-						details: makeDetails("single")([result]),
-						isError: true,
-					};
+					throw new Error(`Task ${result.stopReason || "failed"}: ${errorMsg}`);
 				}
 
 				return {

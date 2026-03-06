@@ -195,17 +195,7 @@ Parameters:
 				};
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				return {
-					content: [{ type: "text", text: `Search error: ${message}` }],
-					details: {
-						query,
-						numResults,
-						type,
-						livecrawl,
-						contextMaxCharacters,
-					} as WebSearchDetails,
-					isError: true,
-				};
+				throw new Error(`Search error: ${message}`);
 			}
 		},
 
