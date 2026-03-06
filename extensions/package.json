@@ -5,6 +5,9 @@
   "description": "",
   "license": "ISC",
   "author": "jorge",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
   "peerDependencies": {
     "@mariozechner/pi-agent-core": "^0.56.0",
     "@mariozechner/pi-ai": "^0.56.0",

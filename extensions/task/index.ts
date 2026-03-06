@@ -162,10 +162,9 @@ interface TaskDetails {
 function getFinalOutput(messages: Message[]): string {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const msg = messages[i];
-		if (msg.role === "assistant") {
-			for (const part of msg.content) {
-				if (part.type === "text") return part.text;
-			}
+		if (!msg || msg.role !== "assistant") continue;
+		for (const part of msg.content) {
+			if (typeof part !== "string" && part.type === "text") return part.text;
 		}
 	}
 	return "";
@@ -289,7 +288,9 @@ async function mapWithConcurrencyLimit<TIn, TOut>(
 		while (!aborted) {
 			const current = nextIndex++;
 			if (current >= items.length) return;
-			results[current] = await fn(items[current], current);
+			const item = items[current];
+			if (item === undefined) return;
+			results[current] = await fn(item, current);
 		}
 	});
 	try {
@@ -574,10 +575,9 @@ export default function (pi: ExtensionAPI) {
 				const allResults: TaskResult[] = new Array(params.tasks.length);
 
 				// Initialize placeholder results
-				for (let i = 0; i < params.tasks.length; i++) {
-					const task = params.tasks[i];
-					allResults[i] = {
-						id: `task-${i + 1}`,
+				for (const [index, task] of params.tasks.entries()) {
+					allResults[index] = {
+						id: `task-${index + 1}`,
 						description: task.description,
 						prompt: task.prompt,
 						exitCode: -1, // -1 = still running
@@ -724,6 +724,7 @@ export default function (pi: ExtensionAPI) {
 			// Single task result
 			if (details.mode === "single" && details.results.length === 1) {
 				const r = details.results[0];
+				if (!r) return new Text("(no output)", 0, 0);
 				const isError = r.exitCode !== 0 || r.stopReason === "error" || r.stopReason === "aborted";
 				const icon = isError ? theme.fg("error", "✗") : theme.fg("success", "✓");
 				const displayItems = getDisplayItems(r.messages);
