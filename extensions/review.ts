@@ -18,7 +18,7 @@ import { join, dirname } from "node:path";
 // Fresh session review state (module-level — one active review at a time)
 let reviewOriginId: string | undefined = undefined;
 
-const DEFAULT_DIFF_REVSET = 'heads((trunk()::@- & (remote_bookmarks() | bookmarks())) ~ (@ & empty())-)::@';
+const DEFAULT_DIFF_REVSET = 'heads((trunk()::@- & (remote_bookmarks() | bookmarks()))- ~ (@ & empty())-)::@';
 
 const REVIEW_PROMPT =
 	"Review the code changes using this exact diff command: `{diffCommand}`. If no bookmark argument is provided, this range should represent parent bookmark → current revision, even when `@` itself has no bookmark. Provide prioritized, actionable findings.";

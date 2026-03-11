@@ -7,9 +7,7 @@
   "enabledModels": [
     "anthropic/claude-opus-4-6",
     "opencode/kimi-k2.5",
-    "openai-codex/gpt-5.3-codex",
     "opencode/glm-5",
-    "openai-codex/gpt-5.3-codex-spark",
     "anthropic/claude-sonnet-4-6",
     "openai-codex/gpt-5.4"
   ],
