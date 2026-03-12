@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.57.1",
+  "lastChangelogVersion": "0.58.3",
   "defaultThinkingLevel": "high",
-  "theme": "light",
+  "theme": "dark",
   "promptsDir": "~/obsidian/delvaze/prompts",
   "exaMcpEndpoint": "https://mcp.exa.ai/mcp",
   "enabledModels": [
