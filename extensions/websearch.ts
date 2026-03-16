@@ -138,6 +138,11 @@ Parameters:
 - type: Search depth - "auto" (balanced), "fast" (quick), "deep" (comprehensive)
 - livecrawl: "fallback" (use cache, crawl if unavailable) or "preferred" (prioritize fresh content)
 - contextMaxCharacters: Maximum characters for context (default: 10000)`,
+		promptSnippet: "Search the web for current information, recent docs, or facts beyond your knowledge cutoff.",
+		promptGuidelines: [
+			"Use this tool for recent information, live documentation lookups, or fact verification that may be newer than the model's training data.",
+			"Never include secrets, private URLs, credentials, API keys, or other sensitive data in web search queries.",
+		],
 
 		parameters: Type.Object({
 			query: Type.String({ description: "Web search query" }),

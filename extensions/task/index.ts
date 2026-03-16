@@ -519,6 +519,11 @@ export default function (pi: ExtensionAPI) {
 			"Optional per-task: prompt (extra instructions), cwd, tools (limit which tools), model.",
 			`Max ${MAX_PARALLEL_TASKS} parallel tasks, ${MAX_CONCURRENCY} concurrent.`,
 		].join("\n"),
+		promptSnippet: "Spawn one or more isolated subagents for parallel research, analysis, or context-isolated work.",
+		promptGuidelines: [
+			"Use this tool when work can be split into independent subtasks or when a separate context window would help.",
+			`Prefer a small number of focused tasks; the maximum is ${MAX_PARALLEL_TASKS} tasks with ${MAX_CONCURRENCY} running concurrently.`,
+		],
 		parameters: TaskParams,
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {

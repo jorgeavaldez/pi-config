@@ -9,12 +9,17 @@
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@mariozechner/pi-agent-core": "^0.56.0",
-    "@mariozechner/pi-ai": "^0.56.0",
-    "@mariozechner/pi-coding-agent": "^0.56.0",
+    "@mariozechner/pi-agent-core": "^0.59.0",
+    "@mariozechner/pi-ai": "^0.59.0",
+    "@mariozechner/pi-coding-agent": "^0.59.0",
+    "@mariozechner/pi-tui": "^0.59.0",
     "typescript": "^5"
   },
   "devDependencies": {
+    "@mariozechner/pi-agent-core": "^0.59.0",
+    "@mariozechner/pi-ai": "^0.59.0",
+    "@mariozechner/pi-coding-agent": "^0.59.0",
+    "@mariozechner/pi-tui": "^0.59.0",
     "@types/node": "^25.3.0",
     "typescript": "^5.9.3"
   }
