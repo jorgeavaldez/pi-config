@@ -109,7 +109,22 @@ Enabled by default. Toggle with `/jj-footer` (`on`, `off`, `toggle`, `status`).
 ```bash
 mkdir -p ~/.pi/agent
 git clone git@github.com:jorgeavaldez/pi-config.git ~/.pi/agent
-cd ~/.pi/agent/extensions && npm install
+cd ~/.pi/agent/extensions && bun install
 ```
 
 Create `~/.pi/agent/auth.json` with your credentials (not tracked).
+
+## Extension dependency sync
+
+The extension workspace keeps local `devDependencies` on the same pi package versions as the installed `pi` CLI so TypeScript, editor IntelliSense, and `bun run type-check` use matching APIs.
+
+`peerDependencies` are kept broad (`"*"`) because pi provides those packages at runtime; the pinned local `devDependencies` are just for workspace tooling.
+
+After upgrading pi, resync the extension workspace with:
+
+```bash
+cd ~/.pi/agent/extensions
+bun run sync-pi-deps
+```
+
+That script reads the installed `pi` binary, updates the local pi package versions in `extensions/package.json`, and runs `bun install`.
