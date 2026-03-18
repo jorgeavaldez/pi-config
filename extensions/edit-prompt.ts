@@ -12,7 +12,7 @@
  *   - Fuzzy file search using fd when available
  *   - Search mode requires files to exist in promptsDir
  *
- * Files stored in: configurable via promptsDir in settings.json (default: ~/.pi/prompts)
+ * Files stored in: configurable via obsidian.json (`promptsDir` or `vaultPath`) with fallback to ~/.pi/prompts
  */
 
 import { existsSync, readFileSync, writeFileSync, statSync } from "node:fs";

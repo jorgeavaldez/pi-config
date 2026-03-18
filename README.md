@@ -4,6 +4,7 @@
 
 - `AGENTS.md` - global rules (loaded for all sessions)
 - `settings.json` - agent settings
+- `obsidian.json` - obsidian vault paths for prompts/plans
 - `keybindings.json` - custom keybindings
 - `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, editor-open, editor-env, subagent, task, review, jj-footer)
 - `skills/` - custom skills (pr-review-comments, resolve-pr-comment, commit)
@@ -13,21 +14,37 @@
 
 ## Configuration
 
-Custom settings in `settings.json`:
+### `obsidian.json`
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `promptsDir` | Directory for prompt files | `~/.pi/prompts` |
-| `exaMcpEndpoint` | Exa AI MCP endpoint URL | `https://mcp.exa.ai/mcp` |
+Obsidian-related paths live in `obsidian.json` instead of pi's root `settings.json`.
+
+Supported locations:
+- global: `~/.pi/agent/obsidian.json`
+- project override: `<cwd>/.pi/obsidian.json`
+
+Supported fields:
+
+| Field | Description |
+|-------|-------------|
+| `vaultPath` | Root of the Obsidian vault |
+| `promptsDir` | Prompt file directory; overrides `vaultPath/prompts` |
+| `plansDir` | Plan file directory; overrides `vaultPath/work/plans` |
 
 Example:
 
 ```json
 {
-  "promptsDir": "~/obsidian/vault/prompts/",
-  "exaMcpEndpoint": "https://mcp.exa.ai/mcp"
+  "vaultPath": "~/obsidian/delvaze",
+  "promptsDir": "~/obsidian/delvaze/prompts",
+  "plansDir": "~/obsidian/delvaze/work/plans"
 }
 ```
+
+### Custom settings in `settings.json`
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `exaMcpEndpoint` | Exa AI MCP endpoint URL | `https://mcp.exa.ai/mcp` |
 
 ## Extensions
 
@@ -51,7 +68,7 @@ Unlike subagent (which requires pre-defined agents), task allows ad-hoc workers 
 
 ### edit-prompt
 
-Opens your editor to edit prompt files (configurable via `promptsDir` setting).
+Opens your editor to edit prompt files (configured via `obsidian.json`).
 
 **Usage:** `/edit` - First call opens file selector, subsequent calls reuse the file.
 

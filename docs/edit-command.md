@@ -5,7 +5,7 @@ Opens your editor to edit prompt files stored in an Obsidian vault, then execute
 ## Overview
 
 **Location:** `~/.pi/agent/extensions/edit-prompt.ts`  
-**Storage:** Configurable via `promptsDir` in `~/.pi/agent/settings.json` (default: `~/.pi/prompts`)
+**Storage:** Configurable via `obsidian.json` (`promptsDir` or `vaultPath`), with fallback to `~/.pi/prompts`
 
 ## Behavior
 
@@ -23,7 +23,7 @@ The dialog has two modes, toggled with `Ctrl+R`:
 | Mode | Description |
 |------|-------------|
 | **New File** (default) | Type a filename to create or open |
-| **Search** | Fuzzy search existing files in `promptsDir` using `fd` |
+| **Search** | Fuzzy search existing files in the resolved prompts directory using `fd` |
 
 **Search mode features:**
 - Fuzzy matching (e.g., `rem` matches `remediation-pr-close.md`)
@@ -178,21 +178,33 @@ See [docs/editor-open.md](editor-open.md) for delimiter format and extraction be
 
 ### Prompts Directory
 
-The storage location for prompt files is configured via `promptsDir` in your settings file:
+The storage location for prompt files is configured via Obsidian config:
 
-**File:** `~/.pi/agent/settings.json`
+**Files:**
+- global: `~/.pi/agent/obsidian.json`
+- project override: `<cwd>/.pi/obsidian.json`
 
 ```json
 {
-  "promptsDir": "~/obsidian/vault/prompts"
+  "vaultPath": "~/obsidian/delvaze",
+  "promptsDir": "~/obsidian/delvaze/prompts"
 }
 ```
 
+### Resolution order
+
+1. `promptsDir` from project `obsidian.json`
+2. `promptsDir` from global `obsidian.json`
+3. `vaultPath + "/prompts"` from project `obsidian.json`
+4. `vaultPath + "/prompts"` from global `obsidian.json`
+5. fallback: `~/.pi/prompts`
+
 ### Details
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `promptsDir` | `~/.pi/prompts` | Directory where prompt files are stored |
+| Field | Default | Description |
+|------|---------|-------------|
+| `promptsDir` | derived or `~/.pi/prompts` | Directory where prompt files are stored |
+| `vaultPath` | none | Obsidian vault root used to derive `promptsDir` and other vault paths |
 
 - **Tilde expansion:** Paths starting with `~` are expanded to your home directory
 - **Auto-creation:** The directory is not auto-created; it must exist before use
