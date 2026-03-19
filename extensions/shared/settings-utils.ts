@@ -2,21 +2,11 @@
  * Custom config and settings utilities.
  *
  * - Obsidian paths are loaded from obsidian.json
- * - Other extension-specific settings continue to load from scoped SettingsManager settings
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { SettingsManager } from "@mariozechner/pi-coding-agent";
 import { homedir } from "node:os";
 import { join } from "node:path";
-
-interface CustomSettings {
-  exaMcpEndpoint?: string;
-}
-
-interface RawCustomSettings {
-  exaMcpEndpoint?: unknown;
-}
 
 interface ObsidianConfig {
   vaultPath?: string;
@@ -32,14 +22,7 @@ interface RawObsidianConfig {
 
 const DEFAULTS = {
   promptsDir: "~/.pi/prompts",
-  exaMcpEndpoint: "https://mcp.exa.ai/mcp",
 } as const;
-
-function normalizeCustomSettings(settings: RawCustomSettings): CustomSettings {
-  return {
-    exaMcpEndpoint: typeof settings.exaMcpEndpoint === "string" ? settings.exaMcpEndpoint : undefined,
-  };
-}
 
 function normalizeObsidianConfig(settings: RawObsidianConfig): ObsidianConfig {
   return {
@@ -128,28 +111,3 @@ export function getPlansDir(cwd: string): string | undefined {
   return loadObsidianConfig(cwd).plansDir;
 }
 
-/**
- * Load custom settings with project-over-global precedence.
- */
-function loadCustomSettings(cwd: string): CustomSettings {
-  try {
-    const settingsManager = SettingsManager.create(cwd);
-
-    const projectSettings = normalizeCustomSettings(settingsManager.getProjectSettings() as RawCustomSettings);
-    const globalSettings = normalizeCustomSettings(settingsManager.getGlobalSettings() as RawCustomSettings);
-
-    return {
-      exaMcpEndpoint: projectSettings.exaMcpEndpoint ?? globalSettings.exaMcpEndpoint,
-    };
-  } catch {
-    return {};
-  }
-}
-
-/**
- * Get the Exa MCP endpoint URL.
- */
-export function getExaMcpEndpoint(cwd: string): string {
-  const settings = loadCustomSettings(cwd);
-  return settings.exaMcpEndpoint ?? DEFAULTS.exaMcpEndpoint;
-}

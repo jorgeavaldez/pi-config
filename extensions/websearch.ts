@@ -10,7 +10,8 @@ import { truncateHead, formatSize, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "
 import { Type } from "@sinclair/typebox";
 import { StringEnum } from "@mariozechner/pi-ai";
 import { Text } from "@mariozechner/pi-tui";
-import { getExaMcpEndpoint } from "./shared/settings-utils.js";
+
+const EXA_MCP_ENDPOINT = "https://mcp.exa.ai/mcp";
 const TIMEOUT_MS = 25000;
 
 interface WebSearchParams {
@@ -32,8 +33,7 @@ interface WebSearchDetails {
 	originalLines?: number;
 }
 
-async function performSearch(params: WebSearchParams, cwd: string, signal?: AbortSignal): Promise<string> {
-	const EXA_MCP_ENDPOINT = getExaMcpEndpoint(cwd);
+async function performSearch(params: WebSearchParams, signal?: AbortSignal): Promise<string> {
 	const request = {
 		jsonrpc: "2.0",
 		id: 1,
@@ -168,7 +168,7 @@ Parameters:
 			});
 
 			try {
-				let result = await performSearch({ query, numResults, type, livecrawl, contextMaxCharacters }, ctx.cwd, signal);
+				let result = await performSearch({ query, numResults, type, livecrawl, contextMaxCharacters }, signal);
 
 				// Apply truncation if needed
 				const truncation = truncateHead(result, {
