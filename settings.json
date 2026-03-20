@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.60.0",
+  "lastChangelogVersion": "0.61.0",
   "defaultThinkingLevel": "high",
   "theme": "light",
   "enabledModels": [
@@ -10,8 +10,8 @@
     "openai-codex/gpt-5.4"
   ],
   "hideThinkingBlock": false,
-  "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-4-6",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.4",
   "skills": [
     "./skills/",
     "./private-skills/"

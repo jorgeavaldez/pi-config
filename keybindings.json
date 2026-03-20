@@ -1,11 +1,13 @@
 {
-  "cursorUp": ["up", "alt+k"],
-  "cursorDown": ["down", "alt+j"],
-  "cursorLeft": ["left", "alt+h"],
-  "cursorRight": ["right", "alt+l"],
-  "cursorWordLeft": ["alt+left", "alt+b"],
-  "cursorWordRight": ["alt+right", "alt+w"],
-  "deleteCharBackward": ["backspace", "ctrl+h"],
-  "deleteWordBackward": ["ctrl+w", "alt+backspace"],
-  "externalEditor": []
+  "tui.editor.cursorUp": ["up", "alt+k"],
+  "tui.editor.cursorDown": ["down", "alt+j"],
+  "tui.editor.cursorLeft": ["left", "alt+h"],
+  "tui.editor.cursorRight": ["right", "alt+l"],
+  "tui.editor.cursorWordLeft": ["alt+left", "alt+b"],
+  "tui.editor.cursorWordRight": ["alt+right", "alt+w"],
+  "tui.editor.deleteCharBackward": ["backspace", "ctrl+h"],
+  "tui.editor.deleteWordBackward": ["ctrl+w", "alt+backspace"],
+  "tui.select.up": ["up", "alt+k"],
+  "tui.select.down": ["down", "alt+j"],
+  "app.editor.external": []
 }
