@@ -592,6 +592,10 @@ export default function editPromptExtension(pi: ExtensionAPI) {
    * Update the status indicator with the current filename.
    */
   const updateStatusIndicator = (ctx: ExtensionContext) => {
+    if (!ctx.hasUI) {
+      return;
+    }
+
     const filepath = getActiveEditFile();
     if (filepath) {
       const filename = basename(filepath);

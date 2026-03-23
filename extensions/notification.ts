@@ -102,12 +102,19 @@ const notify = resolveNotifier();
 
 export default function (pi: ExtensionAPI) {
 	// Notify when agent finishes and is ready for input
-	pi.on("agent_end", async () => {
+	pi.on("agent_end", async (_event, ctx) => {
+		if (!ctx.hasUI) {
+			return;
+		}
 		notify("pi", "Ready for input");
 	});
 
 	// Notify when a potentially dangerous tool call is made
-	pi.on("tool_call", async (event) => {
+	pi.on("tool_call", async (event, ctx) => {
+		if (!ctx.hasUI) {
+			return;
+		}
+
 		const { toolName, input } = event;
 
 		// Check for dangerous bash commands

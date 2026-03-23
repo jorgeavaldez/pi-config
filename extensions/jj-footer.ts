@@ -514,6 +514,10 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("session_start", async (_event, ctx) => {
+		if (!ctx.hasUI) {
+			return;
+		}
+
 		updateRepoContext(ctx.cwd);
 		if (enabled) {
 			setFooter(ctx);
@@ -522,6 +526,10 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("session_switch", async (_event, ctx) => {
+		if (!ctx.hasUI) {
+			return;
+		}
+
 		updateRepoContext(ctx.cwd);
 		if (enabled && !intervalId && repoRoot) {
 			scheduleStatusRefresh();
