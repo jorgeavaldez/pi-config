@@ -26,6 +26,15 @@ export default function (pi: ExtensionAPI) {
 	let intervalId: ReturnType<typeof setInterval> | null = null;
 
 	pi.on("session_start", async (_event, ctx) => {
+		if (!ctx.hasUI) {
+			return;
+		}
+
+		if (intervalId) {
+			clearInterval(intervalId);
+			intervalId = null;
+		}
+
 		let currentTheme = (await isDarkMode()) ? "dark" : "light";
 		ctx.ui.setTheme(currentTheme);
 
@@ -36,6 +45,7 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.setTheme(currentTheme);
 			}
 		}, 2000);
+		intervalId.unref?.();
 	});
 
 	pi.on("session_shutdown", () => {
