@@ -45,10 +45,26 @@ export function clearActiveEditFile(): void {
 
 /**
  * Get the user's preferred editor with fallback chain.
- * $EDITOR → $VISUAL → nvim → vim → vi
+ * $EDITOR → $VISUAL → first available of nvim/vim/vi → vi
  */
 export function getEditor(): string {
-  return process.env.EDITOR || process.env.VISUAL || "nvim" || "vim" || "vi";
+  const configuredEditor = process.env.EDITOR || process.env.VISUAL;
+  if (configuredEditor) {
+    return configuredEditor;
+  }
+
+  for (const candidate of ["nvim", "vim", "vi"] as const) {
+    try {
+      const result = spawnSync("which", [candidate], { encoding: "utf-8", timeout: 1000 });
+      if (result.status === 0 && result.stdout.trim()) {
+        return candidate;
+      }
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return "vi";
 }
 
 /**

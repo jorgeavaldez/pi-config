@@ -3,6 +3,7 @@
  *
  * Inspired by Claude Code's Task tool from the Agent SDK.
  * Spawns separate `pi` processes for each task, giving isolated context windows.
+ * Child tasks inherit installed pi extensions by default.
  *
  * Unlike the subagent tool which requires pre-defined agents, this tool allows
  * the main agent to spawn ad-hoc workers with custom prompts for any task.
@@ -326,7 +327,7 @@ async function runTask(
 	onUpdate: OnUpdateCallback | undefined,
 	makeDetails: (results: TaskResult[]) => TaskDetails
 ): Promise<TaskResult> {
-	const args: string[] = ["--mode", "json", "-p", "--no-session", "--no-extensions"];
+	const args: string[] = ["--mode", "json", "-p", "--no-session"];
 
 	// Use specified model or inherit current model
 	if (model) args.push("--model", model);
@@ -511,7 +512,7 @@ export default function (pi: ExtensionAPI) {
 		description: [
 			"Spawn general-purpose subagents to handle tasks in isolated context windows.",
 			"Use for: parallel research, independent analyses, divide-and-conquer, context isolation.",
-			"Each task runs as a separate pi process with full tool access by default.",
+			"Each task runs as a separate pi process and inherits installed extensions by default.",
 			"",
 			"Single task: { description: '...' }",
 			"Parallel tasks: { tasks: [{ description: '...' }, ...] }",
