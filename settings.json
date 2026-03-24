@@ -13,6 +13,8 @@
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.4",
+  "shellPath": "/bin/zsh",
+  "shellCommandPrefix": "source ~/.zprofile >/dev/null 2>&1",
   "skills": [
     "./skills/",
     "./private-skills/"

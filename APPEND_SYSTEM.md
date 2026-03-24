@@ -3,6 +3,12 @@
 Ask clarifying questions directly in chat when needed.
 If multiple clarifications are required, ask them in one concise message.
 
+## Shell Execution
+
+- The shell tool is labeled `bash`, but on this machine pi is configured to execute commands via `/bin/zsh`.
+- pi also prefixes shell commands with `source ~/.zprofile >/dev/null 2>&1` before execution.
+- Keep this in mind for shell-specific behavior, startup environment, functions, aliases, and compatibility.
+
 ## Source Control Preference (Jujutsu)
 
 - The user uses Jujutsu (`jj`) for source control.
