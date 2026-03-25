@@ -5,8 +5,8 @@
  * Assumes jj colocated with git.
  *
  * Usage:
- * - `/review` - review using parent-bookmark-to-current revset
- * - `/review some-bookmark` - review against a specific bookmark
+ * - `/review` - review using trunk()..@ revset
+ * - `/review <revset>` - review using a custom revset (e.g. `main..@` or `abc123::@`)
  */
 
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
@@ -18,7 +18,7 @@ import { join, dirname } from "node:path";
 // Fresh session review state (module-level — one active review at a time)
 let reviewOriginId: string | undefined = undefined;
 
-const DEFAULT_DIFF_REVSET = 'heads((trunk()::@- & (remote_bookmarks() | bookmarks()))- ~ (@ & empty())-)::@';
+const DEFAULT_DIFF_REVSET = 'trunk()..@';
 
 const REVIEW_PROMPT =
 	"Review the code changes using this exact diff command: `{diffCommand}`. If no bookmark argument is provided, this range should represent parent bookmark → current revision, even when `@` itself has no bookmark. Provide prioritized, actionable findings.";
@@ -202,7 +202,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
 	// /review [bookmark]
 	pi.registerCommand("review", {
-		description: "Review code changes from parent bookmark to current revision",
+		description: "Review code changes (default: trunk()..@). Pass a custom revset to override.",
 		handler: async (args, ctx) => {
 			if (!ctx.hasUI) {
 				ctx.ui.notify("Review requires interactive mode", "error");
@@ -219,13 +219,12 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			const explicitBookmark = args?.trim() || null;
-			const diffCommand = explicitBookmark
-				? `jj diff --from ${explicitBookmark}`
-				: `jj diff -r "${DEFAULT_DIFF_REVSET}"`;
-			const reviewLabel = explicitBookmark
-				? `bookmark '${explicitBookmark}'`
-				: "parent bookmark → current revision";
+			const customRevset = args?.trim() || null;
+			const revset = customRevset ?? DEFAULT_DIFF_REVSET;
+			const diffCommand = `jj diff -r "${revset}"`;
+			const reviewLabel = customRevset
+				? `revset '${customRevset}'`
+				: `${DEFAULT_DIFF_REVSET}`;
 
 			// Determine fresh session mode
 			const entries = ctx.sessionManager.getEntries();
