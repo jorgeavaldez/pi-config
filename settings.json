@@ -18,5 +18,8 @@
   "skills": [
     "./skills/",
     "./private-skills/"
+  ],
+  "packages": [
+    "npm:@victor-software-house/pi-multicodex"
   ]
 }
