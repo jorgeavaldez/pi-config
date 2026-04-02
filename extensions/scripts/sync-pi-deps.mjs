@@ -51,22 +51,37 @@ function findPiBinary() {
   throw new Error("Could not find 'pi' on PATH");
 }
 
-function getInstalledPiPackageJson() {
+function getInstalledPiInfo() {
   const piBin = findPiBinary();
   const piCliPath = fs.realpathSync(piBin);
   const piPackageRoot = path.dirname(path.dirname(piCliPath));
   const piPackageJsonPath = path.join(piPackageRoot, "package.json");
-  return JSON.parse(fs.readFileSync(piPackageJsonPath, "utf8"));
+  const piPackageJson = JSON.parse(fs.readFileSync(piPackageJsonPath, "utf8"));
+  const typeboxPackageJsonPath = path.join(
+    piPackageRoot,
+    "node_modules",
+    "@sinclair",
+    "typebox",
+    "package.json"
+  );
+  const typeboxPackageJson = JSON.parse(fs.readFileSync(typeboxPackageJsonPath, "utf8"));
+
+  return {
+    piPackageRoot,
+    piPackageJson,
+    typeboxPackageJson,
+  };
 }
 
 const workspacePackageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-const installedPiPackageJson = getInstalledPiPackageJson();
+const { piPackageJson: installedPiPackageJson, typeboxPackageJson } = getInstalledPiInfo();
 
 const pinnedVersions = {
   "@mariozechner/pi-coding-agent": stripVersion(installedPiPackageJson.version),
   "@mariozechner/pi-agent-core": stripVersion(installedPiPackageJson.dependencies["@mariozechner/pi-agent-core"]),
   "@mariozechner/pi-ai": stripVersion(installedPiPackageJson.dependencies["@mariozechner/pi-ai"]),
   "@mariozechner/pi-tui": stripVersion(installedPiPackageJson.dependencies["@mariozechner/pi-tui"]),
+  "@sinclair/typebox": stripVersion(typeboxPackageJson.version),
 };
 
 workspacePackageJson.peerDependencies ??= {};

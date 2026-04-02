@@ -525,17 +525,6 @@ export default function (pi: ExtensionAPI) {
 		}
 	});
 
-	pi.on("session_switch", async (_event, ctx) => {
-		if (!ctx.hasUI) {
-			return;
-		}
-
-		updateRepoContext(ctx.cwd);
-		if (enabled && !intervalId && repoRoot) {
-			scheduleStatusRefresh();
-		}
-	});
-
 	pi.on("session_shutdown", () => {
 		stopStatusRefresh();
 		requestRender = null;

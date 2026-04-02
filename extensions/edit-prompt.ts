@@ -627,10 +627,9 @@ export default function editPromptExtension(pi: ExtensionAPI) {
     updateStatusIndicator(ctx);
   };
 
-  // Reconstruct state on session lifecycle events
+  // Reconstruct state on session lifecycle events.
+  // session_start covers startup, reload, new, resume, and fork on pi >= 0.65.
   pi.on("session_start", async (_event, ctx) => reconstructState(ctx));
-  pi.on("session_switch", async (_event, ctx) => reconstructState(ctx));
-  pi.on("session_fork", async (_event, ctx) => reconstructState(ctx));
   pi.on("session_tree", async (_event, ctx) => reconstructState(ctx));
 
   pi.registerCommand("edit", {
