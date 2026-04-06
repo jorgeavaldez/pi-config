@@ -6,7 +6,7 @@
 - `settings.json` - agent settings
 - `obsidian.json` - obsidian vault paths for prompts/plans
 - `keybindings.json` - custom keybindings
-- `extensions/` - custom tools (websearch, handoff, notification, theme, edit-prompt, editor-open, editor-env, subagent, task, review, jj-footer)
+- `extensions/` - custom tools (webtools, handoff, notification, theme, edit-prompt, editor-open, editor-env, subagent, task, review, jj-footer)
 - `skills/` - custom skills (pr-review-comments, resolve-pr-comment, commit)
 - `PI_NVIM_RPC.md` - external editor rpc runbook/troubleshooting
 - `prompts/` - custom prompts
@@ -47,6 +47,10 @@ Example:
 | `exaMcpEndpoint` | Exa AI MCP endpoint URL | `https://mcp.exa.ai/mcp` |
 
 ## Extensions
+
+### webtools
+
+Provides Exa-backed `websearch` and `webfetch` tools for real-time web search and page fetching.
 
 ### subagent
 

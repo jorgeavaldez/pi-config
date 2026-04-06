@@ -25,5 +25,8 @@
     "@sinclair/typebox": "0.34.49",
     "@types/node": "^25.3.0",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "ws": "^8.20.0"
   }
 }
