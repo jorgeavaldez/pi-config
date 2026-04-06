@@ -16,3 +16,4 @@ PLAN.md
 bin/
 
 codex-accounts.json
+node_modules/
