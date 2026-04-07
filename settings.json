@@ -1,14 +1,13 @@
 {
-  "lastChangelogVersion": "0.66.1",
+  "lastChangelogVersion": "0.68.0",
   "defaultThinkingLevel": "high",
   "theme": "light",
   "enabledModels": [
     "anthropic/claude-opus-4-6",
-    "opencode/kimi-k2.5",
-    "opencode/glm-5",
+    "opencode/kimi-k2.6",
+    "opencode/glm-5.1",
     "anthropic/claude-sonnet-4-6",
-    "openai-codex/gpt-5.4",
-    "xai/grok-4.20-0309-reasoning"
+    "openai-codex/gpt-5.4"
   ],
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
