@@ -125,8 +125,8 @@ Preserve exact file paths, function names, and error messages.
 /**
  * Check if cwd is inside a jj repo
  */
-function isJjRepo(): boolean {
-	let dir = process.cwd();
+function isJjRepo(cwd: string): boolean {
+	let dir = cwd;
 	while (true) {
 		if (existsSync(join(dir, ".jj"))) return true;
 		const parent = dirname(dir);
@@ -214,7 +214,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			if (!isJjRepo()) {
+			if (!isJjRepo(ctx.cwd)) {
 				ctx.ui.notify("Not a jj repository", "error");
 				return;
 			}

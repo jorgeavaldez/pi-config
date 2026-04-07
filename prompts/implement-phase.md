@@ -1,5 +1,6 @@
 ---
 description: Implement Phase(s) from a plan file
+argument-hint: "<plan-file> <phase(s)>"
 ---
 read through @$1 very carefully.
 you are going to implement Phase(s) $2 of the plan.

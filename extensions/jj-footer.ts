@@ -333,14 +333,14 @@ export default function (pi: ExtensionAPI) {
 					const contextPercentValue = contextUsage?.percent ?? 0;
 					const contextPercent = contextUsage?.percent !== null ? contextPercentValue.toFixed(1) : "?";
 
-					// Keep auto-compaction indicator in sync with settings
-					const effectiveSettingsCwd = settingsCwd ?? process.cwd();
+					// Keep auto-compaction indicator in sync with the active session cwd
+					const effectiveSettingsCwd = settingsCwd ?? ctx.cwd;
 					if (Date.now() - lastSettingsRefreshAt > REFRESH_MS) {
 						refreshAutoCompactSetting(effectiveSettingsCwd);
 					}
 
 					// Replace home directory with ~
-					let cwdDisplay = process.cwd();
+					let cwdDisplay = effectiveSettingsCwd;
 					const home = process.env.HOME || process.env.USERPROFILE;
 					if (home && cwdDisplay.startsWith(home)) {
 						cwdDisplay = `~${cwdDisplay.slice(home.length)}`;
