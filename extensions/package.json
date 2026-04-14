@@ -18,10 +18,10 @@
     "typescript": "^5"
   },
   "devDependencies": {
-    "@mariozechner/pi-agent-core": "0.66.1",
-    "@mariozechner/pi-ai": "0.66.1",
-    "@mariozechner/pi-coding-agent": "0.66.1",
-    "@mariozechner/pi-tui": "0.66.1",
+    "@mariozechner/pi-agent-core": "0.67.1",
+    "@mariozechner/pi-ai": "0.67.1",
+    "@mariozechner/pi-coding-agent": "0.67.1",
+    "@mariozechner/pi-tui": "0.67.1",
     "@sinclair/typebox": "0.34.49",
     "@types/node": "^25.3.0",
     "typescript": "^5.9.3"
