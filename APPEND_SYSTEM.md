@@ -8,6 +8,7 @@ If multiple clarifications are required, ask them in one concise message.
 - The shell tool is labeled `bash`, but on this machine pi is configured to execute commands via `/bin/zsh`.
 - pi also prefixes shell commands with `source ~/.zprofile >/dev/null 2>&1` before execution.
 - Keep this in mind for shell-specific behavior, startup environment, functions, aliases, and compatibility.
+- You have access to `fd`, `ripgrep`, `ast-grep`, `jq`, etc. You should opt to use the optimized, fancy analogues of core code-exploration shell tools whenever possible
 
 ## Source Control Preference (Jujutsu)
 
