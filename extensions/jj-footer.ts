@@ -346,7 +346,7 @@ export default function (pi: ExtensionAPI) {
 						cwdDisplay = `~${cwdDisplay.slice(home.length)}`;
 					}
 
-					let headerLine = theme.fg("dim", cwdDisplay);
+					let headerLeft = theme.fg("dim", cwdDisplay);
 
 					// Branch segment: jj status first, built-in git branch fallback
 					if (repoRoot && Date.now() - lastRefreshAt > REFRESH_MS && !refreshInFlight) {
@@ -355,18 +355,36 @@ export default function (pi: ExtensionAPI) {
 					const fallbackBranch = footerData.getGitBranch();
 					if (repoRoot && cachedStatus) {
 						const branch = formatJjStatus(theme, cachedStatus);
-						headerLine += ` ${branch.styled}`;
+						headerLeft += ` ${branch.styled}`;
 					} else if (fallbackBranch) {
-						headerLine += ` ${theme.fg("muted", `(${fallbackBranch})`)}`;
+						headerLeft += ` ${theme.fg("muted", `(${fallbackBranch})`)}`;
 					}
 
-					// Add session name if set
+					// Add session name on the left and pin session id to the right
 					const sessionName = ctx.sessionManager.getSessionName();
+					const sessionId = ctx.sessionManager.getSessionId();
 					if (sessionName) {
-						headerLine += theme.fg("dim", ` • ${sessionName}`);
+						headerLeft += theme.fg("dim", ` • ${sessionName}`);
 					}
 
-					headerLine = truncateToWidth(headerLine, width, theme.fg("dim", "..."));
+					let headerLine: string;
+					if (!sessionId) {
+						headerLine = truncateToWidth(headerLeft, width, theme.fg("dim", "..."));
+					} else {
+						const headerRight = theme.fg("dim", `session id: ${sessionId}`);
+						const headerRightWidth = visibleWidth(headerRight);
+
+						if (headerRightWidth >= width) {
+							headerLine = truncateToWidth(headerRight, width, theme.fg("dim", "..."));
+						} else {
+							const minPadding = 2;
+							const availableForLeft = Math.max(0, width - headerRightWidth - minPadding);
+							const truncatedLeft =
+								availableForLeft > 0 ? truncateToWidth(headerLeft, availableForLeft, theme.fg("dim", "...")) : "";
+							const padding = " ".repeat(Math.max(0, width - visibleWidth(truncatedLeft) - headerRightWidth));
+							headerLine = `${truncatedLeft}${padding}${headerRight}`;
+						}
+					}
 
 					// Build stats line
 					const statsParts: string[] = [];
