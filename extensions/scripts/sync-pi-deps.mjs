@@ -60,7 +60,6 @@ function getInstalledPiInfo() {
   const typeboxPackageJsonPath = path.join(
     piPackageRoot,
     "node_modules",
-    "@sinclair",
     "typebox",
     "package.json"
   );
@@ -81,7 +80,7 @@ const pinnedVersions = {
   "@mariozechner/pi-agent-core": stripVersion(installedPiPackageJson.dependencies["@mariozechner/pi-agent-core"]),
   "@mariozechner/pi-ai": stripVersion(installedPiPackageJson.dependencies["@mariozechner/pi-ai"]),
   "@mariozechner/pi-tui": stripVersion(installedPiPackageJson.dependencies["@mariozechner/pi-tui"]),
-  "@sinclair/typebox": stripVersion(typeboxPackageJson.version),
+  "typebox": stripVersion(typeboxPackageJson.version),
 };
 
 workspacePackageJson.peerDependencies ??= {};

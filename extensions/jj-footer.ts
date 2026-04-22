@@ -543,8 +543,15 @@ export default function (pi: ExtensionAPI) {
 		}
 	});
 
-	pi.on("session_shutdown", () => {
+	pi.on("session_shutdown", (_event, ctx) => {
 		stopStatusRefresh();
 		requestRender = null;
+
+		// pi 0.69 invalidates pre-reload / pre-replacement extension contexts.
+		// Restore the built-in footer before teardown so the old custom footer
+		// cannot render with a stale ctx during reload/session replacement.
+		if (ctx.hasUI) {
+			ctx.ui.setFooter(undefined);
+		}
 	});
 }
