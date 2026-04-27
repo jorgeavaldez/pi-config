@@ -40,7 +40,7 @@ Opens a draft pull request on GitHub, handling jj (Jujutsu) and git repositories
 ```json
 {
   "description": "Create draft PR",
-  "model": "claude-sonnet-4-5",
+  "model": "opencode/kimi-k2.6",
   "prompt": "Open a draft PR for the current jj bookmark or git branch. Use gh pr create with --draft and --head flags. Detect base branch (main/master). Generate PR title from bookmark description if available."
 }
 ```

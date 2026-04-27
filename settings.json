@@ -1,6 +1,6 @@
 {
-  "lastChangelogVersion": "0.70.2",
-  "defaultThinkingLevel": "high",
+  "lastChangelogVersion": "0.70.5",
+  "defaultThinkingLevel": "medium",
   "theme": "light",
   "enabledModels": [
     "opencode/kimi-k2.6",
@@ -13,7 +13,7 @@
   ],
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.4",
+  "defaultModel": "gpt-5.5",
   "shellPath": "/bin/zsh",
   "shellCommandPrefix": "source ~/.zprofile >/dev/null 2>&1",
   "skills": [
@@ -21,6 +21,6 @@
     "./private-skills/"
   ],
   "packages": [
-    "npm:@victor-software-house/pi-multicodex"
+    "/Users/jorge/proj/pi-multicodex"
   ]
 }

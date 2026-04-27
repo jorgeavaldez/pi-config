@@ -14,7 +14,7 @@ Generate a 1-line commit message for current changes using a fast model.
 ```json
 {
   "description": "Review working copy changes and draft a 1-line commit message",
-  "model": "claude-sonnet-4-5",
+  "model": "opencode/kimi-k2.6",
   "prompt": "1. Run `jj diff --git --no-pager` to see working copy changes.\n2. If there are no changes, say 'No changes in working copy.' and stop.\n3. Draft a 1-line commit message: short phrase, brevity over grammar, explicitly describes changes, NO prefixes (feat:, fix:, etc.), NO verbose descriptions. Examples: 'task tool for parallel subagents', 'fix token expiry edge case', 'refactor auth middleware'.\n4. Return ONLY the commit message, nothing else."
 }
 ```
