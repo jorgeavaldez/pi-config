@@ -5,11 +5,11 @@
  * information beyond the model's knowledge cutoff.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { truncateHead, formatSize, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { truncateHead, formatSize, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { StringEnum } from "@mariozechner/pi-ai";
-import { Text } from "@mariozechner/pi-tui";
+import { StringEnum } from "@earendil-works/pi-ai";
+import { Text } from "@earendil-works/pi-tui";
 
 const EXA_MCP_ENDPOINT = "https://mcp.exa.ai/mcp";
 const TIMEOUT_MS = 25000;

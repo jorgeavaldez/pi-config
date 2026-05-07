@@ -58,7 +58,7 @@ Delegate tasks to subagents with isolated context. Supports single, parallel, an
 
 Agents defined in `agents/*.md` with frontmatter (`name`, `description`, `tools`, `model`).
 
-Based on [pi-coding-agent examples](https://github.com/mariozechner/pi-ai/tree/main/packages/coding-agent/examples/extensions/subagent).
+Based on [pi-coding-agent examples](https://github.com/earendil-works/pi-mono/tree/main/packages/coding-agent/examples/extensions/subagent).
 
 ### task
 

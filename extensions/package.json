@@ -10,19 +10,19 @@
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@mariozechner/pi-agent-core": "*",
-    "@mariozechner/pi-ai": "*",
-    "@mariozechner/pi-coding-agent": "*",
-    "@mariozechner/pi-tui": "*",
+    "@earendil-works/pi-agent-core": "*",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
     "typebox": "*",
     "typescript": "^5"
   },
   "devDependencies": {
-    "@mariozechner/pi-agent-core": "0.73.0",
-    "@mariozechner/pi-ai": "0.73.0",
-    "@mariozechner/pi-coding-agent": "0.73.0",
-    "@mariozechner/pi-tui": "0.73.0",
-    "typebox": "1.1.37",
+    "@earendil-works/pi-agent-core": "0.74.0",
+    "@earendil-works/pi-ai": "0.74.0",
+    "@earendil-works/pi-coding-agent": "0.74.0",
+    "@earendil-works/pi-tui": "0.74.0",
+    "typebox": "1.1.38",
     "@types/node": "^25.3.0",
     "typescript": "^5.9.3"
   },

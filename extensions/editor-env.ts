@@ -7,7 +7,7 @@
 
 import { accessSync, constants } from "node:fs";
 import { join } from "node:path";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 function resolveWrapperPath(): string | null {
   const configHome = process.env.XDG_CONFIG_HOME;

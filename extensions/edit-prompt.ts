@@ -18,8 +18,8 @@
 import { existsSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, basename } from "node:path";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { DynamicBorder } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { DynamicBorder } from "@earendil-works/pi-coding-agent";
 import {
   Container,
   Input,
@@ -28,7 +28,7 @@ import {
   truncateToWidth,
   type Focusable,
   type TUI,
-} from "@mariozechner/pi-tui";
+} from "@earendil-works/pi-tui";
 import {
   getActiveEditFile,
   setActiveEditFile,

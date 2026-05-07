@@ -5,8 +5,8 @@
  * external editors and prompt files.
  */
 
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
-import type { TUI, Component } from "@mariozechner/pi-tui";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { TUI, Component } from "@earendil-works/pi-tui";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

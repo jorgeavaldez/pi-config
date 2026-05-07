@@ -76,10 +76,10 @@ const workspacePackageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")
 const { piPackageJson: installedPiPackageJson, typeboxPackageJson } = getInstalledPiInfo();
 
 const pinnedVersions = {
-  "@mariozechner/pi-coding-agent": stripVersion(installedPiPackageJson.version),
-  "@mariozechner/pi-agent-core": stripVersion(installedPiPackageJson.dependencies["@mariozechner/pi-agent-core"]),
-  "@mariozechner/pi-ai": stripVersion(installedPiPackageJson.dependencies["@mariozechner/pi-ai"]),
-  "@mariozechner/pi-tui": stripVersion(installedPiPackageJson.dependencies["@mariozechner/pi-tui"]),
+  "@earendil-works/pi-coding-agent": stripVersion(installedPiPackageJson.version),
+  "@earendil-works/pi-agent-core": stripVersion(installedPiPackageJson.dependencies["@earendil-works/pi-agent-core"]),
+  "@earendil-works/pi-ai": stripVersion(installedPiPackageJson.dependencies["@earendil-works/pi-ai"]),
+  "@earendil-works/pi-tui": stripVersion(installedPiPackageJson.dependencies["@earendil-works/pi-tui"]),
   "typebox": stripVersion(typeboxPackageJson.version),
 };
 
@@ -92,4 +92,4 @@ for (const [pkg, version] of Object.entries(pinnedVersions)) {
 }
 
 fs.writeFileSync(packageJsonPath, `${JSON.stringify(workspacePackageJson, null, 2)}\n`);
-console.log(`Synced pi extension deps to ${pinnedVersions["@mariozechner/pi-coding-agent"]}`);
+console.log(`Synced pi extension deps to ${pinnedVersions["@earendil-works/pi-coding-agent"]}`);

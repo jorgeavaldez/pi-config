@@ -9,9 +9,9 @@
  * - `/review <revset>` - review using a custom revset (e.g. `main..@` or `abc123::@`)
  */
 
-import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import { BorderedLoader } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { BorderedLoader } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 
