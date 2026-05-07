@@ -1,6 +1,6 @@
 {
   "lastChangelogVersion": "0.73.0",
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "high",
   "theme": "light",
   "enabledModels": [
     "opencode/kimi-k2.6",

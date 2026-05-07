@@ -22,3 +22,7 @@ Ask clarifying questions directly in chat when you need user input before procee
 
 - Group related clarifications into one concise message.
 - Ask only what is necessary to unblock implementation.
+
+## Code Style: Avoid Trivial Indirection
+
+Avoid trivial one-use helpers or proxy functions. Inline simple constructors, list comprehensions, regexes, and transformations unless the abstraction is reused, has meaningful domain semantics, hides real complexity, improves testability, or materially clarifies the caller. Prefer direct, local code over small indirection layers.
