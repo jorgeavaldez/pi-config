@@ -21,7 +21,7 @@ let reviewOriginId: string | undefined = undefined;
 const DEFAULT_DIFF_REVSET = 'trunk()..@';
 
 const REVIEW_PROMPT =
-	"Review the code changes using this exact diff command: `{diffCommand}`. If no bookmark argument is provided, this range should represent parent bookmark → current revision, even when `@` itself has no bookmark. Provide prioritized, actionable findings.";
+	"Review the code changes using this exact diff command: `{diffCommand}`. Keep the `--no-integrate-operation` flag so the review does not modify the jj operation log. If no bookmark argument is provided, this range should represent parent bookmark → current revision, even when `@` itself has no bookmark. Provide prioritized, actionable findings.";
 
 const REVIEW_RUBRIC = `# Review Guidelines
 
@@ -221,7 +221,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
 			const customRevset = args?.trim() || null;
 			const revset = customRevset ?? DEFAULT_DIFF_REVSET;
-			const diffCommand = `jj diff -r "${revset}"`;
+			const diffCommand = `jj --no-integrate-operation diff -r "${revset}"`;
 			const reviewLabel = customRevset
 				? `revset '${customRevset}'`
 				: `${DEFAULT_DIFF_REVSET}`;
