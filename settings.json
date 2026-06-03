@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.78.0",
+  "lastChangelogVersion": "0.79.0",
   "defaultThinkingLevel": "high",
-  "theme": "light",
+  "theme": "dark",
   "enabledModels": [
     "opencode/kimi-k2.6",
     "opencode/glm-5.1",

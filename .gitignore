@@ -17,3 +17,5 @@ bin/
 
 codex-accounts.json
 node_modules/
+
+trust.json
