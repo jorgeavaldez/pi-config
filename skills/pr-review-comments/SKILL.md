@@ -33,13 +33,13 @@ ls -la REVIEW_COMMENT_WORK.md 2>/dev/null
 
 ### 1.1 Fetch PR Review Comments
 
-Run the script to fetch unresolved PR review comments:
+Run the script to fetch unresolved PR review thread comments plus actionable top-level PR review bodies:
 
 ```bash
 ~/.pi/agent/skills/pr-review-comments/get_pr_review_comments
 ```
 
-This will create individual `{comment-id}-review-feedback.md` files in the current directory.
+This will create individual `{comment-id}-review-feedback.md` files in the current directory. Top-level review body files use `PRR_...` IDs and include a note that they are not resolvable review threads.
 
 ### 1.2 Read All Comment Files
 
@@ -247,7 +247,7 @@ After gathering investigation results, make the actual code changes **sequential
 
 ### 3.3 Resolve Comments on GitHub
 
-After addressing each comment in the batch, resolve the thread on GitHub using the `resolve-pr-comment` skill:
+After addressing each threaded `PRRC_...` comment in the batch, resolve the thread on GitHub using the `resolve-pr-comment` skill. Skip top-level `PRR_...` review body files; GitHub does not expose those as resolvable review threads.
 
 1. Get the PR's review threads to find the thread ID for each comment:
    ```bash

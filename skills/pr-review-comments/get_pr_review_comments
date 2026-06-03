@@ -155,17 +155,37 @@ is_comment_stale() {
     return 1 # not stale
 }
 
-# Function to clean up comment body (remove Graphite footer)
+# Function to clean up comment body (remove bot boilerplate/footers)
 clean_comment_body() {
     local body="$1"
 
-    # Remove the Graphite-specific footer and HTML elements
-    # This removes everything from "*Spotted by [Diamond]" onwards and cleans HTML
+    # Remove common bot footers/boilerplate and HTML elements.
+    # Graphite adds everything from "*Spotted by [Diamond]" onwards.
+    # Codex top-level PR review bodies add an explanatory <details> block.
     echo "$body" | sed -E '
+        /<details([[:space:]>]|$)/,/<\/details>/d
         /\*Spotted by \[Diamond\]/,$d
         s/<[^>]*>//g
         /^[[:space:]]*$/d
     ' | sed -E '/^```suggestion$/,/^```$/d' | sed '/^[[:space:]]*$/d'
+}
+
+# Function to extract file path and line from a top-level PR review body.
+# Some bots (for example Codex) leave review bodies rather than inline review
+# thread comments. Those bodies include a GitHub blob URL such as:
+# https://github.com/owner/repo/blob/sha/path/to/file.py#L12-L14
+extract_review_body_location() {
+    local body="$1"
+    local repo_owner="$2"
+    local repo_name="$3"
+    local location_regex="https://[^[:space:]/]+/${repo_owner}/${repo_name}/blob/[^/[:space:]#]+/([^#[:space:]]+)#L([0-9]+)"
+
+    if [[ "$body" =~ $location_regex ]]; then
+        echo "${BASH_REMATCH[1]} ${BASH_REMATCH[2]}"
+        return 0
+    fi
+
+    return 1
 }
 
 # Function to format comment output
@@ -174,6 +194,8 @@ format_comment() {
     local file_path="$2"
     local line_number="$3"
     local clean_body="$4"
+    local source="${5:-thread}"
+    local review_url="${6:-}"
 
     # Format file path with line number if available
     local file_location="$file_path"
@@ -183,6 +205,10 @@ format_comment() {
 
     echo "$file_location"
     echo ""
+    if [ "$source" = "review" ]; then
+        echo "Top-level PR review body (not a resolvable review thread): $review_url"
+        echo ""
+    fi
     echo "$clean_body"
 }
 
@@ -205,46 +231,75 @@ main() {
     temp_dir=$(mktemp -d)
     trap "rm -rf '$temp_dir'" EXIT
 
-    # Fetch unresolved comments using GraphQL API
-    log_info "Fetching unresolved PR review comments..."
+    # Fetch unresolved inline comments using GraphQL API.
+    log_info "Fetching unresolved PR review thread comments..."
     local comments_json="$temp_dir/comments.json"
+    local thread_comments_json="$temp_dir/thread-comments.json"
+    local review_bodies_json="$temp_dir/review-bodies.json"
 
     if ! gh api graphql -f query='{ repository(owner: "'"$repo_owner"'", name: "'"$repo_name"'") { pullRequest(number: '$pr_number') { reviewThreads(first: 100) { edges { node { id isResolved comments(first: 10) { edges { node { id body path line author { login } createdAt } } } } } } } } }' \
-        --jq '.data.repository.pullRequest.reviewThreads.edges[] | select(.node.isResolved == false) | .node.comments.edges[0].node | {id: .id, body: .body, path: .path, line: .line, created_at: .createdAt}' \
-        >"$comments_json"; then
-        log_error "Failed to fetch PR comments"
+        --jq '.data.repository.pullRequest.reviewThreads.edges[] | select(.node.isResolved == false) | .node.comments.edges[0].node | {id: .id, body: .body, path: .path, line: .line, created_at: .createdAt, source: "thread", url: null}' \
+        >"$thread_comments_json"; then
+        log_error "Failed to fetch PR review thread comments"
         exit 1
     fi
 
+    # Fetch top-level PR review bodies. These are not review threads and cannot
+    # be resolved, but some bots leave actionable feedback in this shape.
+    log_info "Fetching top-level PR review bodies..."
+    if ! gh api --paginate "repos/$repo_owner/$repo_name/pulls/$pr_number/reviews" \
+        --jq '.[] | select(((.body // "") | gsub("[[:space:]]"; "") | length) > 0) | {id: .node_id, body: .body, path: null, line: null, created_at: .submitted_at, source: "review", url: .html_url}' \
+        >"$review_bodies_json"; then
+        log_error "Failed to fetch PR review bodies"
+        exit 1
+    fi
+
+    cat "$thread_comments_json" "$review_bodies_json" >"$comments_json"
+
     # Check if we got any comments
     if [ ! -s "$comments_json" ]; then
-        log_warn "No unresolved comments found on PR #$pr_number"
+        log_warn "No unresolved comments or top-level review bodies found on PR #$pr_number"
         exit 0
     fi
 
-    local total_comments
+    local total_comments thread_comment_count review_body_count
     total_comments=$(wc -l <"$comments_json")
-    log_info "Found $total_comments unresolved comments"
+    thread_comment_count=$(wc -l <"$thread_comments_json")
+    review_body_count=$(wc -l <"$review_bodies_json")
+    log_info "Found $thread_comment_count unresolved thread comments and $review_body_count top-level review bodies"
 
     local processed_count=0
     local stale_count=0
+    local review_without_location_count=0
 
     # Process each comment
     while IFS= read -r comment_json; do
-        local comment_id file_path body line created_at
+        local comment_id file_path body line created_at source review_url
 
         comment_id=$(echo "$comment_json" | jq -r '.id')
         file_path=$(echo "$comment_json" | jq -r '.path')
         body=$(echo "$comment_json" | jq -r '.body')
         line=$(echo "$comment_json" | jq -r '.line')
         created_at=$(echo "$comment_json" | jq -r '.created_at')
+        source=$(echo "$comment_json" | jq -r '.source // "thread"')
+        review_url=$(echo "$comment_json" | jq -r '.url // ""')
 
-        log_info "Processing comment $comment_id for file: $file_path"
+        if [ "$source" = "review" ]; then
+            local review_location
+            if ! review_location=$(extract_review_body_location "$body" "$repo_owner" "$repo_name"); then
+                log_info "Skipping top-level review $comment_id without a code location"
+                ((review_without_location_count += 1))
+                continue
+            fi
+            read -r file_path line <<<"$review_location"
+        fi
+
+        log_info "Processing $source comment $comment_id for file: $file_path"
 
         # Check if comment is stale
         if is_comment_stale "$file_path"; then
             log_warn "Skipping stale comment $comment_id (file: $file_path)"
-            ((stale_count++))
+            ((stale_count += 1))
             continue
         fi
 
@@ -254,7 +309,7 @@ main() {
 
         # Format the prompt
         local formatted_prompt
-        formatted_prompt=$(format_comment "$comment_id" "$file_path" "$line" "$clean_body")
+        formatted_prompt=$(format_comment "$comment_id" "$file_path" "$line" "$clean_body" "$source" "$review_url")
 
         # Write to file
         local output_file="${comment_id}-review-feedback.md"
@@ -263,13 +318,14 @@ main() {
         # Output the file location (this is what gets piped)
         echo "$output_file"
 
-        ((processed_count++))
+        ((processed_count += 1))
         log_info "Created: $output_file"
 
     done <"$comments_json"
 
     log_info "Processing complete!"
-    log_info "Total comments: $total_comments"
+    log_info "Total comments/reviews considered: $total_comments"
+    log_info "Top-level reviews without code location skipped: $review_without_location_count"
     log_info "Stale comments skipped: $stale_count"
     log_info "Files created: $processed_count"
 }
