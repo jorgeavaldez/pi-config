@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.76.0",
+  "lastChangelogVersion": "0.78.0",
   "defaultThinkingLevel": "high",
   "theme": "light",
   "enabledModels": [
@@ -7,8 +7,8 @@
     "opencode/glm-5.1",
     "anthropic/claude-sonnet-4-6",
     "openai-codex/gpt-5.5",
-    "xai/grok-4.20-0309-reasoning",
-    "anthropic/claude-opus-4-7"
+    "anthropic/claude-opus-4-7",
+    "openai-codex/gpt-5.3-codex-spark"
   ],
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
