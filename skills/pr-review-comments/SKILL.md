@@ -39,7 +39,7 @@ Run the script to fetch unresolved PR review thread comments plus actionable top
 ~/.pi/agent/skills/pr-review-comments/get_pr_review_comments
 ```
 
-This will create individual `{comment-id}-review-feedback.md` files in the current directory. Top-level review body files use `PRR_...` IDs and include a note that they are not resolvable review threads.
+This will create individual `{comment-id}-review-feedback.md` files in the current directory. Top-level review body files use `PRR_...` IDs and include a note that they are not resolvable review threads. Top-level review bodies that you have acknowledged with the configured reaction (`EYES` by default) are skipped on subsequent fetches.
 
 ### 1.2 Read All Comment Files
 
@@ -247,7 +247,17 @@ After gathering investigation results, make the actual code changes **sequential
 
 ### 3.3 Resolve Comments on GitHub
 
-After addressing each threaded `PRRC_...` comment in the batch, resolve the thread on GitHub using the `resolve-pr-comment` skill. Skip top-level `PRR_...` review body files; GitHub does not expose those as resolvable review threads.
+After addressing each threaded `PRRC_...` comment in the batch, resolve the thread on GitHub using the `resolve-pr-comment` skill. For top-level `PRR_...` review body files, add the acknowledgement reaction instead; GitHub does not expose those as resolvable review threads.
+
+For a top-level review body:
+
+```bash
+~/.pi/agent/skills/pr-review-comments/ack_pr_review_comment PRR_...
+# or pass the generated file:
+~/.pi/agent/skills/pr-review-comments/ack_pr_review_comment PRR_...-review-feedback.md
+```
+
+The acknowledgement reaction defaults to `EYES`; set `PR_REVIEW_ACK_REACTION` to use another GitHub reaction enum. Acknowledged top-level review bodies are ignored by `get_pr_review_comments`.
 
 1. Get the PR's review threads to find the thread ID for each comment:
    ```bash
