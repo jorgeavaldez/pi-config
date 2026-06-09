@@ -7,6 +7,7 @@
   "tui.editor.cursorWordRight": ["alt+right", "alt+w"],
   "tui.editor.deleteCharBackward": ["backspace", "ctrl+h"],
   "tui.editor.deleteWordBackward": ["ctrl+w", "alt+backspace"],
+  "tui.input.newLine": ["shift+enter", "ctrl+j"],
   "tui.select.up": ["up", "alt+k"],
   "tui.select.down": ["down", "alt+j"],
   "app.editor.external": []
