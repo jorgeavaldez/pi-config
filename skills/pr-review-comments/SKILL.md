@@ -7,6 +7,27 @@ description: Fetches PR review comments from GitHub, batches similar comments to
 
 This skill helps you systematically work through PR review comments by batching similar ones together and addressing them one batch at a time with user feedback between each.
 
+## Critical Safety Rule — No Source-Control Mutations or Offers
+
+This skill is for triaging and editing PR review feedback only. It does **not** grant permission to mutate source control, and it must never offer to mutate source control on the user's behalf.
+
+**Never run source-control mutation commands from this skill. Never ask whether the user wants you to run them. Never suggest that you can run them.** This includes, but is not limited to:
+
+- `jj describe`, `jj commit`, `jj bookmark move/create/delete`, `jj git push`, `jj squash`, `jj rebase`, `jj new`
+- `git add`, `git commit`, `git push`, branch creation, branch switching, rebases, amends
+- Any command that moves a bookmark/branch, creates a commit, rewrites history, or pushes to a remote
+
+Allowed GitHub-only actions when explicitly prompted:
+
+- Update an existing PR title or description with `gh pr edit` when the user specifically asks for that.
+- Resolve/acknowledge review comments after the fix is visible on the PR, or when the user specifically asks to resolve/acknowledge.
+
+Important interpretation rules:
+
+- User approval to **"proceed"** with a review-comment batch means: edit files, run checks, update `REVIEW_COMMENT_WORK.md`, then stop and report. It is **not** permission to commit, move bookmarks, push, update the PR branch, or offer to do so.
+- After local fixes are complete, stop and report that changes are local. Do **not** ask whether to update the PR branch.
+- Do not resolve GitHub review threads or acknowledge top-level review bodies until the corresponding fix is visible on the PR, unless the user explicitly asks you to resolve/acknowledge now.
+
 ## Workflow Overview
 
 1. Check if `REVIEW_COMMENT_WORK.md` exists in the current directory
@@ -247,7 +268,9 @@ After gathering investigation results, make the actual code changes **sequential
 
 ### 3.3 Resolve Comments on GitHub
 
-After addressing each threaded `PRRC_...` comment in the batch, resolve the thread on GitHub using the `resolve-pr-comment` skill. For top-level `PRR_...` review body files, add the acknowledgement reaction instead; GitHub does not expose those as resolvable review threads.
+Only resolve or acknowledge comments after the corresponding fix is visible on the PR, or after the user explicitly instructs you to resolve/acknowledge now. Local unpushed edits are not enough.
+
+After the fix is visible on the PR, resolve each threaded `PRRC_...` comment in the batch using the `resolve-pr-comment` skill. For top-level `PRR_...` review body files, add the acknowledgement reaction instead; GitHub does not expose those as resolvable review threads.
 
 For a top-level review body:
 
@@ -309,11 +332,11 @@ After completing the batch:
 
 **STOP and ask the user**:
 
-> "Batch N complete. I [brief summary of changes made]. 
+> "Batch N complete. I [brief summary of changes made]. Changes are local and have not been committed, pushed, or resolved on GitHub.
 > 
 > Any feedback on these changes, or should I proceed to Batch N+1?"
 
-**WAIT for the user's response.** Do not proceed until they respond.
+**WAIT for the user's response.** Do not proceed until they respond. Do not treat "proceed" as permission to commit, move bookmarks, push, update the PR branch, offer source-control actions, or resolve GitHub comments.
 
 ### 3.6 Handle User Response
 
@@ -328,8 +351,10 @@ After completing the batch:
 When all batches are marked as done:
 
 1. Update `REVIEW_COMMENT_WORK.md` to reflect completion
-2. Inform the user: "All PR review comments have been addressed."
-3. Optionally summarize what was done across all batches
+2. Inform the user: "All PR review comments have been addressed locally."
+3. State clearly whether changes are only local or already visible on the PR
+4. Do **not** ask to update the PR branch, push, commit, move bookmarks, or otherwise mutate source control
+5. Optionally summarize what was done across all batches
 
 ---
 
@@ -339,7 +364,8 @@ When all batches are marked as done:
 - **Make code edits sequentially** - tasks are for read-only investigation; actual edits should be done one at a time to avoid conflicts
 - **Always update REVIEW_COMMENT_WORK.md BEFORE asking for feedback**
 - **Always WAIT for user response between batches** - never auto-proceed
-- **Resolve comments on GitHub after addressing them** - use the `resolve-pr-comment` skill
+- **Never mutate source control from this skill and never offer to do so** - no commits, bookmark moves, branch moves, pushes, rebases, amends, or prompts asking to update the PR branch
+- **Resolve comments on GitHub only after fixes are visible on the PR or explicit user instruction** - use the `resolve-pr-comment` skill
 - **Delete comment files after each batch** - not all at the end
 - **Trust the work file on resume** - don't re-fetch comments
 - **User can delete REVIEW_COMMENT_WORK.md to force a fresh start**

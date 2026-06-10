@@ -12,8 +12,8 @@
     "anthropic/claude-fable-5"
   ],
   "hideThinkingBlock": false,
-  "defaultProvider": "anthropic",
-  "defaultModel": "claude-fable-5",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.5",
   "shellPath": "/bin/zsh",
   "shellCommandPrefix": "source ~/.zprofile >/dev/null 2>&1",
   "skills": [
