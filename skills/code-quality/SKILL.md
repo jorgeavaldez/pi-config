@@ -1,35 +1,15 @@
-# Critical Rules
+---
+name: code-quality
+description: Strict general-purpose code quality review. Use before and after non-trivial code edits, when refactoring, when the user asks to revise/review/cleanup, or when user flags abstraction/type/API/code smell.
+---
 
-## Git Operations - NEVER DO THESE UNLESS EXPLICITLY ASKED
+# Code Quality
 
-- **NEVER** run `git add`, `git commit`, `git push`
-- **NEVER** create branches
-- **NEVER** perform any git operations on behalf of the user
-
-Only perform git operations when the user EXPLICITLY requests them.
-
-## Source Control Tooling (Prefer jj)
-
-- The user uses Jujutsu (`jj`) for source control.
-- Assume repositories are `jj` + Git colocated repos.
-- Use `jj` for all source-control operations (status, diff, log, bookmark/branch, commit, push, rebase/squash, etc.).
-- Do not use `git` for source-control actions unless the user explicitly requests `git`.
-- When explaining workflows, prefer `jj` terminology and commands.
-
-## Asking Clarifying Questions
-
-Ask clarifying questions directly in chat when you need user input before proceeding.
-
-- Group related clarifications into one concise message.
-- Ask only what is necessary to unblock implementation.
-
-## Code Style: Avoid Trivial Indirection
-
-Avoid trivial one-use helpers or proxy functions. Inline simple constructors, list comprehensions, regexes, and transformations unless the abstraction is reused, has meaningful domain semantics, hides real complexity, improves testability, or materially clarifies the caller. Prefer direct, local code over small indirection layers.
-
-## Critical Code Quality Rules
+Use this skill to prevent trivial indirection, brittle API shims, type acrobatics, and cleanup-by-patching-only.
 
 These rules are mandatory for all languages and all code changes.
+
+## Critical Rules
 
 ### 1. Prefer direct, local code over abstraction
 
@@ -250,3 +230,26 @@ First:
 - then answer.
 
 If the user is right, say so and fix it.
+
+## Required Workflow
+
+Before implementation:
+
+1. Identify the intended public API.
+2. Identify what should remain private.
+3. State any abstractions being introduced and justify each one.
+
+During implementation:
+
+1. Prefer direct code.
+2. Do not preserve bad APIs.
+3. Avoid casts and widening.
+4. Validate at boundaries.
+
+Before final response:
+
+1. Re-read every modified file.
+2. Search for helper/wrapper/shim/alias patterns.
+3. Search for `any`, suppressions, double casts, compatibility exports.
+4. Remove unnecessary public exports.
+5. Run lint/typecheck/tests.

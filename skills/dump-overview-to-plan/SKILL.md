@@ -5,21 +5,49 @@ description: Creates or updates a practical implementation or handoff plan in Jo
 
 # Dump Overview to Plan
 
-Create or update a practical, implementation-ready plan in the Obsidian plans directory configured in Obsidian config.
+Create or update a practical, implementation-ready plan in the right vault location.
 
-Config files:
-- project override: `.pi/obsidian.json`
-- global fallback: `~/.pi/agent/obsidian.json`
+Do not assume all plans belong in `work/plans/`.
+Personal technical projects should usually live under `projects/`.
+Use path, current working directory, user wording, and related docs to route the plan.
+Ask when the destination is unclear.
 
-Resolve the plans directory in this order:
-1. read `~/.pi/agent/obsidian.json` if it exists
-2. read `.pi/obsidian.json` from the current project if it exists
-3. merge them with project values overriding global values
-4. use merged `plansDir` if present
-5. otherwise, if merged `vaultPath` is present, derive `plansDir = <vaultPath>/work/plans`
-6. if neither value is available, STOP and ask the user
+## Vault/location resolution
 
-Prioritize signal over exhaustiveness. The goal is a useful handoff document, not a giant research dump.
+Prefer simple resolution:
+
+1. If the user gave an explicit output path, use it.
+2. If the current working directory is inside the Obsidian vault, use vault-relative paths there.
+3. If the user names a known project/doc path, search the obvious vault paths.
+4. If a minimal Obsidian config exists, it may be used as a fallback:
+   - project override: `.pi/obsidian.json`
+   - global fallback: `~/.pi/agent/obsidian.json`
+5. If neither current directory nor config nor explicit path identifies the vault, STOP and ask.
+
+Do not expand or depend on a large hardcoded directory map.
+The vault paths are intentionally plain and intuitive.
+
+## Destination rules
+
+### Work plans
+
+Use `work/plans/` for Nebari/Bari/work implementation plans and specs.
+Work repos usually live under `~/proj/werk/`, but do not assume every repo there unless the task says so.
+
+### Personal project plans
+
+Use `projects/` for personal technical projects.
+Prefer existing project files/directories when present.
+Ask before creating a new project directory or if more than one destination is plausible.
+
+Examples:
+
+- `projects/jj-rebator/sparse-workspaces.md`
+- `projects/pi-coding-agent/rpc-extension-ui-request-fix-plan.md`
+
+### Garden/reference notes
+
+Use `garden/` only when the output is durable reusable knowledge rather than a project execution plan.
 
 ## File selection rules
 
@@ -27,44 +55,41 @@ Prioritize signal over exhaustiveness. The goal is a useful handoff document, no
 Use that exact path.
 
 ### If the user referenced an existing plan by name or topic
-Search the plans directory first and reuse the existing matching file if there is a clear match.
+Search likely destinations first and reuse an existing matching file if there is a clear match.
 
-Use `bash` to inspect likely matches in the resolved `plansDir`, for example:
+Useful searches:
 
 ```bash
-find "$PLANS_DIR" -maxdepth 1 -type f | sort
+fd -t f "keyword" work/plans work/analysis work/docs work/reference work/overviews projects garden 2>/dev/null
+rg -l "keyword" work projects garden prompts 2>/dev/null
 ```
 
-### If no plan file was given
-Infer a filename from the conversation and write the file under:
+Use the `obsidian` CLI for native search/tags/properties if available and simpler.
+Do not depend on it.
 
-- `<resolved plansDir>/<inferred-name>.md`
+### If no plan file was given
+Infer a filename from the conversation and write it under the selected destination.
 
 Filename rules:
-- use the primary feature, subsystem, or task name from the conversation
+- use the primary feature, subsystem, or task name
 - convert to concise kebab-case
 - prefer stable nouns over verbs
-- append `-plan.md` for new plan files unless the conversation clearly implies another established naming pattern
+- append `-plan.md` for new work plans unless the existing pattern says otherwise
 - avoid generic names like `implementation-plan.md`, `notes-plan.md`, or `update-plan.md`
-- if there is a clearly related existing plan, update it instead of creating a near-duplicate
-- if there are two equally plausible names and choosing incorrectly would be confusing, STOP and ask the user
-
-Examples:
-- `poll status refresh endpoint` → `poll-status-refresh-plan.md`
-- `infra map orchestration workflow` → `infra-map-orchestration-plan.md`
-- `slack canvas sync` → `slack-canvas-sync-plan.md`
+- update a clearly related existing plan instead of creating a near-duplicate
+- ask if there are two equally plausible destinations or names
 
 ## Workflow
 
-1. Resolve Obsidian config and determine `plansDir` before selecting or writing a plan file.
-2. Read the relevant code, docs, notes, and any existing plan file.
-3. If a missing answer would materially affect the plan, STOP and ask the user. Do not guess.
-4. Write or update the plan in the resolved plans directory.
-5. Do one self-review focused only on blocker-level gaps, contradictions, or missing implementation details.
+1. Resolve the vault and destination before writing.
+2. Read relevant code, docs, notes, and any existing plan file.
+3. If a missing answer would materially affect the plan, STOP and ask.
+4. Write or update the plan.
+5. Do one self-review focused on blocker-level gaps, contradictions, and missing implementation details.
 6. Optionally run at most one review task only if the work is unusually cross-cutting or high-risk.
 7. If you run a review task, ask it for at most the top 5 blocker/high-risk issues.
 8. Incorporate only material fixes.
-9. STOP once the plan is implementation-ready. Do not loop on repeated reviews or micro-edits.
+9. Stop once the plan is implementation-ready.
 
 ## Required plan content
 
@@ -75,12 +100,12 @@ Include:
   - in progress
   - blocked
   - next
-- business context and requirements
+- business/project context and requirements
 - explicit IN scope / OUT of scope
 - validated assumptions vs assumptions still needing validation
-- relevant codebase file references using relative paths
+- relevant codebase file references using relative paths when possible
 - key findings, observations, decisions, and implementation details that save the next engineer time
-- a progress checklist mapped to phases and key deliverables
+- a progress checklist mapped to phases and deliverables
 - phased execution plan with, for each phase:
   - goal and description
   - files touched or created
@@ -90,9 +115,11 @@ Include:
 
 ## Writing rules
 
-- Write a practical handoff plan, not a full research transcript.
+- Write a practical handoff plan, not a research transcript.
+- Prefer path and wikilinks/backlinks over frontmatter metadata.
+- Preserve work/personal boundaries.
 - Remove material ambiguity, but do not chase perfection.
-- If something is unresolved but non-blocking, document it briefly in the most relevant section instead of expanding the plan.
+- Document unresolved non-blockers briefly in the relevant section.
 - Keep the plan concise, integrated, and useful.
 - Avoid duplication, implementation journals, append-only discovery dumps, and giant “changes from above” sections.
 - Prefer blocker-level and high-risk information over low-value polish.

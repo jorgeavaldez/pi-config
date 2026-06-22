@@ -4,7 +4,7 @@
 
 - `AGENTS.md` - global rules (loaded for all sessions)
 - `settings.json` - agent settings
-- `obsidian.json` - obsidian vault paths for prompts/plans
+- `obsidian.json` - optional Obsidian vault root
 - `keybindings.json` - custom keybindings
 - `extensions/` - custom tools (webtools, handoff, notification, theme, edit-prompt, editor-open, editor-env, subagent, task, review, jj-footer)
 - `skills/` - custom skills (pr-review-comments, resolve-pr-comment, commit)
@@ -16,7 +16,8 @@
 
 ### `obsidian.json`
 
-Obsidian-related paths live in `obsidian.json` instead of pi's root `settings.json`.
+The optional Obsidian config stores only the vault root.
+Tools and skills derive obvious paths like `prompts/` from the vault root and otherwise route by path/context.
 
 Supported locations:
 - global: `~/.pi/agent/obsidian.json`
@@ -27,18 +28,21 @@ Supported fields:
 | Field | Description |
 |-------|-------------|
 | `vaultPath` | Root of the Obsidian vault |
-| `promptsDir` | Prompt file directory; overrides `vaultPath/prompts` |
-| `plansDir` | Plan file directory; overrides `vaultPath/work/plans` |
 
 Example:
 
 ```json
 {
-  "vaultPath": "~/obsidian/delvaze",
-  "promptsDir": "~/obsidian/delvaze/prompts",
-  "plansDir": "~/obsidian/delvaze/work/plans"
+  "vaultPath": "~/obsidian/delvaze"
 }
 ```
+
+Do not add per-directory overrides or domain-specific task paths here.
+The vault layout is intentionally plain:
+
+- prompts derive from `<vaultPath>/prompts`
+- work plans live under `work/plans/` when the work domain is clear
+- personal project plans live under `projects/` or require an explicit path/clarifying question
 
 ### Custom settings in `settings.json`
 
@@ -72,7 +76,7 @@ Unlike subagent (which requires pre-defined agents), task allows ad-hoc workers 
 
 ### edit-prompt
 
-Opens your editor to edit prompt files (configured via `obsidian.json`).
+Opens your editor to edit prompt files under `<vaultPath>/prompts` when `obsidian.json` is configured, otherwise `~/.pi/prompts`.
 
 **Usage:** `/edit` - First call opens file selector, subsequent calls reuse the file.
 

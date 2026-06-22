@@ -1,7 +1,7 @@
 /**
  * Custom config and settings utilities.
  *
- * - Obsidian paths are loaded from obsidian.json
+ * - Obsidian vault path is loaded from obsidian.json
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -10,14 +10,10 @@ import { join } from "node:path";
 
 interface ObsidianConfig {
   vaultPath?: string;
-  promptsDir?: string;
-  plansDir?: string;
 }
 
 interface RawObsidianConfig {
   vaultPath?: unknown;
-  promptsDir?: unknown;
-  plansDir?: unknown;
 }
 
 const DEFAULTS = {
@@ -27,8 +23,6 @@ const DEFAULTS = {
 function normalizeObsidianConfig(settings: RawObsidianConfig): ObsidianConfig {
   return {
     vaultPath: typeof settings.vaultPath === "string" ? settings.vaultPath : undefined,
-    promptsDir: typeof settings.promptsDir === "string" ? settings.promptsDir : undefined,
-    plansDir: typeof settings.plansDir === "string" ? settings.plansDir : undefined,
   };
 }
 
@@ -74,20 +68,8 @@ function loadObsidianConfig(cwd: string): ObsidianConfig {
     ...projectConfig,
   };
 
-  const expandedVaultPath = merged.vaultPath ? expandTilde(merged.vaultPath) : undefined;
-
   return {
-    vaultPath: expandedVaultPath,
-    promptsDir: merged.promptsDir
-      ? expandTilde(merged.promptsDir)
-      : expandedVaultPath
-        ? join(expandedVaultPath, "prompts")
-        : undefined,
-    plansDir: merged.plansDir
-      ? expandTilde(merged.plansDir)
-      : expandedVaultPath
-        ? join(expandedVaultPath, "work", "plans")
-        : undefined,
+    vaultPath: merged.vaultPath ? expandTilde(merged.vaultPath) : undefined,
   };
 }
 
@@ -95,19 +77,11 @@ function loadObsidianConfig(cwd: string): ObsidianConfig {
  * Get the prompts directory.
  *
  * Resolution order:
- * 1. promptsDir from obsidian.json
- * 2. vaultPath/prompts derived from obsidian.json
- * 3. ~/.pi/prompts fallback
+ * 1. vaultPath/prompts derived from obsidian.json
+ * 2. ~/.pi/prompts fallback
  */
 export function getPromptsDir(cwd: string): string {
   const config = loadObsidianConfig(cwd);
-  return config.promptsDir ?? expandTilde(DEFAULTS.promptsDir);
-}
-
-/**
- * Get the plans directory, if configured.
- */
-export function getPlansDir(cwd: string): string | undefined {
-  return loadObsidianConfig(cwd).plansDir;
+  return config.vaultPath ? join(config.vaultPath, "prompts") : expandTilde(DEFAULTS.promptsDir);
 }
 

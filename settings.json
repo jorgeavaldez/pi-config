@@ -1,15 +1,16 @@
 {
-  "lastChangelogVersion": "0.79.6",
+  "lastChangelogVersion": "0.79.9",
   "defaultThinkingLevel": "high",
   "theme": "light",
   "enabledModels": [
     "opencode/kimi-k2.6",
     "opencode/glm-5.1",
-    "anthropic/claude-sonnet-4-6",
     "openai-codex/gpt-5.5",
     "anthropic/claude-opus-4-7",
     "openai-codex/gpt-5.3-codex-spark",
-    "anthropic/claude-fable-5"
+    "anthropic/claude-fable-5",
+    "opencode/deepseek-v4-pro",
+    "opencode/deepseek-v4-flash"
   ],
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
@@ -19,8 +20,5 @@
   "skills": [
     "./skills/",
     "./private-skills/"
-  ],
-  "packages": [
-    "/Users/jorge/proj/pi-multicodex"
   ]
 }

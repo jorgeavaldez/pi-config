@@ -5,7 +5,7 @@ Opens your editor to edit prompt files stored in an Obsidian vault, then execute
 ## Overview
 
 **Location:** `~/.pi/agent/extensions/edit-prompt.ts`  
-**Storage:** Configurable via `obsidian.json` (`promptsDir` or `vaultPath`), with fallback to `~/.pi/prompts`
+**Storage:** Derived from `obsidian.json` `vaultPath` as `<vaultPath>/prompts`, with fallback to `~/.pi/prompts`
 
 ## Behavior
 
@@ -102,7 +102,7 @@ New sections are **prepended** after frontmatter, pushing older content down. Ea
 
 | Decision | Rationale |
 |----------|-----------|
-| Hardcoded directory | Single-user extension, simplicity over configurability |
+| Vault-root config only | Keep config minimal; derive prompt storage from `<vaultPath>/prompts` |
 | Newest-first ordering | Most relevant prompt is always at top when editing |
 | Session-scoped filename | Natural workflow—related prompts stay in one file |
 | Session-wide (not branch-specific) | Simpler mental model; prompt file is a session-level setting |
@@ -179,7 +179,7 @@ See [docs/editor-open.md](editor-open.md) for delimiter format and extraction be
 
 ### Prompts Directory
 
-The storage location for prompt files is configured via Obsidian config:
+The storage location for prompt files is derived from the Obsidian vault root.
 
 **Files:**
 - global: `~/.pi/agent/obsidian.json`
@@ -187,25 +187,22 @@ The storage location for prompt files is configured via Obsidian config:
 
 ```json
 {
-  "vaultPath": "~/obsidian/delvaze",
-  "promptsDir": "~/obsidian/delvaze/prompts"
+  "vaultPath": "~/obsidian/delvaze"
 }
 ```
 
 ### Resolution order
 
-1. `promptsDir` from project `obsidian.json`
-2. `promptsDir` from global `obsidian.json`
-3. `vaultPath + "/prompts"` from project `obsidian.json`
-4. `vaultPath + "/prompts"` from global `obsidian.json`
-5. fallback: `~/.pi/prompts`
+1. `vaultPath + "/prompts"` from project `obsidian.json`
+2. `vaultPath + "/prompts"` from global `obsidian.json`
+3. fallback: `~/.pi/prompts`
 
 ### Details
 
 | Field | Default | Description |
 |------|---------|-------------|
-| `promptsDir` | derived or `~/.pi/prompts` | Directory where prompt files are stored |
-| `vaultPath` | none | Obsidian vault root used to derive `promptsDir` and other vault paths |
+| `vaultPath` | none | Obsidian vault root used to derive prompt storage |
 
 - **Tilde expansion:** Paths starting with `~` are expanded to your home directory
 - **Auto-creation:** The directory is not auto-created; it must exist before use
+- **No prompt/plan directory overrides:** keep routing in skills/docs, not JSON config

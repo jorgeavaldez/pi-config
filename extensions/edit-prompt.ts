@@ -10,9 +10,9 @@
  * Features:
  *   - Two modes: "New File" (default) and "Search" (toggle with Ctrl+R)
  *   - Fuzzy file search using fd when available
- *   - Search mode requires files to exist in promptsDir
+ *   - Search mode requires files to exist in the resolved prompts directory
  *
- * Files stored in: configurable via obsidian.json (`promptsDir` or `vaultPath`) with fallback to ~/.pi/prompts
+ * Files stored in: <vaultPath>/prompts from obsidian.json, with fallback to ~/.pi/prompts
  */
 
 import { existsSync, readFileSync, writeFileSync, statSync } from "node:fs";
