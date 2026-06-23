@@ -14,6 +14,7 @@ import { BorderedLoader } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { promptEditorWithExternalEdit } from "./shared/editor-ui.js";
 
 // Fresh session review state (module-level — one active review at a time)
 let reviewOriginId: string | undefined = undefined;
@@ -223,29 +224,29 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			let revsetInput = args.trim() || DEFAULT_DIFF_REVSET;
-			while (true) {
-				const editedRevset = await ctx.ui.editor("Review revset", revsetInput);
-				if (editedRevset === undefined) {
-					if (revsetInput) {
-						revsetInput = "";
-						continue;
-					}
-
-					ctx.ui.notify("Review cancelled", "info");
-					return;
-				}
-
-				revsetInput = editedRevset.trim();
-				break;
+			const editedRevset = await promptEditorWithExternalEdit(
+				ctx,
+				"Review revset",
+				args.trim() || DEFAULT_DIFF_REVSET,
+				"pi-review-revset-",
+			);
+			if (editedRevset === undefined) {
+				ctx.ui.notify("Review cancelled", "info");
+				return;
 			}
 
+			const revsetInput = editedRevset.trim();
 			if (!revsetInput) {
 				ctx.ui.notify("Review cancelled", "info");
 				return;
 			}
 
-			const guidanceInput = await ctx.ui.editor("Additional review guidance (optional)");
+			const guidanceInput = await promptEditorWithExternalEdit(
+				ctx,
+				"Additional review guidance (optional)",
+				"",
+				"pi-review-guidance-",
+			);
 			if (guidanceInput === undefined) {
 				ctx.ui.notify("Review cancelled", "info");
 				return;
