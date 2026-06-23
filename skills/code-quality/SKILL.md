@@ -1,6 +1,6 @@
 ---
 name: code-quality
-description: Strict general-purpose code quality review. Use before and after non-trivial code edits, when refactoring, when the user asks to revise/review/cleanup, or when user flags abstraction/type/API/code smell.
+description: Audit-first strict code quality review. Use before and after non-trivial code edits, when refactoring, when the user asks to revise/review/cleanup, or when user flags abstraction/type/API/code smell. Requires a full self-review audit and approval before cleanup edits.
 ---
 
 # Code Quality
@@ -8,6 +8,31 @@ description: Strict general-purpose code quality review. Use before and after no
 Use this skill to prevent trivial indirection, brittle API shims, type acrobatics, and cleanup-by-patching-only.
 
 These rules are mandatory for all languages and all code changes.
+
+## Non-Negotiable Process
+
+When this skill is used to review, revise, refactor, or clean up existing code, begin in **audit-only mode**.
+
+Do not edit files during audit-only mode. Do not run with the first issue you notice. Do not make a narrow patch and call it cleanup.
+
+First, inspect the full set of changed files fresh, including code from parent revisions that now belongs to the changed-file surface. Then produce a self-review audit and stop for user approval before modifying code.
+
+The audit must:
+
+1. **Steelman the current shape**: explain the strongest plausible reason each notable helper, wrapper, type, export, cache, schema, and test seam might exist.
+2. **Retrospect against this skill**: explain where that shape still fails these rules, especially directness, public surface area, type precision, validation boundaries, and test design.
+3. **Inventory the whole changed surface**: list every modified file and every helper/wrapper/shim/alias/exported type/explicit return type/cache/config abstraction touched or adjacent to the change.
+4. **Classify each item** as one of:
+   - keep, with a specific rule-based justification;
+   - inline;
+   - delete;
+   - merge;
+   - make private;
+   - redesign.
+5. **Explain the proposed cleanup plan** before edits, including expected call-site and test changes.
+6. **Stop for approval**. Do not modify files until the user approves the audit/plan.
+
+If the user explicitly asks for findings only, stop after the audit. If the user explicitly asks to auto-apply, still perform and present the audit first, then proceed only if the instruction clearly waived the approval checkpoint.
 
 ## Critical Rules
 
@@ -233,23 +258,62 @@ If the user is right, say so and fix it.
 
 ## Required Workflow
 
-Before implementation:
+### Phase 1: Fresh intake, no edits
 
-1. Identify the intended public API.
-2. Identify what should remain private.
-3. State any abstractions being introduced and justify each one.
+1. Determine the changed scope with the appropriate source-control diff/status command.
+2. Read every modified file in full, or in complete chunks if large.
+3. Read adjacent call sites/tests needed to understand whether exports and helpers are real boundaries or incidental seams.
+4. Search the changed scope for:
+   - helper/wrapper/shim/alias/proxy/pass-through patterns;
+   - exported symbols and explicit return/object types;
+   - `any`, suppressions, double casts, broad records, compatibility exports;
+   - tests importing internals or preserving obsolete API shapes.
 
-During implementation:
+### Phase 2: Self-review audit, still no edits
 
-1. Prefer direct code.
-2. Do not preserve bad APIs.
-3. Avoid casts and widening.
-4. Validate at boundaries.
+Produce an audit before modifying code. Use this structure:
+
+```markdown
+## Code Quality Audit
+
+### Changed Surface
+- file: why it is in scope
+
+### Steelman
+- item: strongest reason this shape might be justified
+
+### Retrospect
+- item: why the steelman is insufficient, or why the item should stay
+
+### Decisions
+| Item | Classification | Justification | Planned change |
+| ---- | -------------- | ------------- | -------------- |
+| path:symbol | keep/inline/delete/merge/private/redesign | rule-based reason | concrete action |
+
+### Approval Checkpoint
+I will not modify files until you approve this plan.
+```
+
+Do not collapse this into one paragraph. Do not list only the first issue found. The audit is the work product.
+
+### Phase 3: Implementation after approval
+
+1. Apply the approved cleanup across the whole changed surface, not only the first issue.
+2. Prefer direct code.
+3. Do not preserve bad APIs.
+4. Avoid casts and widening.
+5. Validate at boundaries.
+6. Update call sites and tests to the improved API instead of adding compatibility shims.
+
+### Phase 4: Verification and final retrospect
 
 Before final response:
 
 1. Re-read every modified file.
-2. Search for helper/wrapper/shim/alias patterns.
-3. Search for `any`, suppressions, double casts, compatibility exports.
-4. Remove unnecessary public exports.
-5. Run lint/typecheck/tests.
+2. Re-run the helper/wrapper/shim/alias/export/type-acrobatics searches.
+3. Remove unnecessary public exports.
+4. Run formatting/lint/typecheck/tests appropriate to the change.
+5. Report what changed relative to the approved audit:
+   - items removed/inlined/merged/made private;
+   - items intentionally kept and why;
+   - validation commands and results.

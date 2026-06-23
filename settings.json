@@ -20,5 +20,8 @@
   "skills": [
     "./skills/",
     "./private-skills/"
+  ],
+  "packages": [
+    "npm:@ff-labs/pi-fff"
   ]
 }
