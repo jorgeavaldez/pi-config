@@ -5,8 +5,8 @@
  * Assumes jj colocated with git.
  *
  * Usage:
- * - `/review` - review using trunk()..@ revset
- * - `/review <revset>` - review using a custom revset (e.g. `main..@` or `abc123::@`)
+ * - `/review` - interactively choose a revset and optional review guidance
+ * - `/review <revset>` - use the provided revset as the interactive default
  */
 
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
@@ -143,6 +143,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 		ctx: ExtensionCommandContext,
 		reviewLabel: string,
 		diffCommand: string,
+		additionalGuidance: string | undefined,
 		useFreshSession: boolean,
 	): Promise<void> {
 		if (reviewOriginId) {
@@ -192,7 +193,10 @@ export default function reviewExtension(pi: ExtensionAPI) {
 		}
 
 		const prompt = REVIEW_PROMPT.replace(/{diffCommand}/g, diffCommand);
-		const fullPrompt = `${REVIEW_RUBRIC}\n\n---\n\nPlease perform a code review with the following focus:\n\n${prompt}`;
+		const guidanceSection = additionalGuidance
+			? `\n\nAdditional user guidance:\n\n${additionalGuidance}`
+			: "";
+		const fullPrompt = `${REVIEW_RUBRIC}\n\n---\n\nPlease perform a code review with the following focus:\n\n${prompt}${guidanceSection}`;
 
 		const modeHint = useFreshSession ? " (fresh session)" : "";
 		ctx.ui.notify(`Starting review for ${reviewLabel}${modeHint}`, "info");
@@ -200,9 +204,9 @@ export default function reviewExtension(pi: ExtensionAPI) {
 		pi.sendUserMessage(fullPrompt);
 	}
 
-	// /review [bookmark]
+	// /review [revset]
 	pi.registerCommand("review", {
-		description: "Review code changes (default: trunk()..@). Pass a custom revset to override.",
+		description: "Review code changes with an interactive revset and optional guidance prompt.",
 		handler: async (args, ctx) => {
 			if (!ctx.hasUI) {
 				ctx.ui.notify("Review requires interactive mode", "error");
@@ -219,12 +223,39 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			const customRevset = args?.trim() || null;
-			const revset = customRevset ?? DEFAULT_DIFF_REVSET;
-			const diffCommand = `jj --no-integrate-operation diff -r "${revset}"`;
-			const reviewLabel = customRevset
-				? `revset '${customRevset}'`
-				: `${DEFAULT_DIFF_REVSET}`;
+			let revsetInput = args.trim() || DEFAULT_DIFF_REVSET;
+			while (true) {
+				const editedRevset = await ctx.ui.editor("Review revset", revsetInput);
+				if (editedRevset === undefined) {
+					if (revsetInput) {
+						revsetInput = "";
+						continue;
+					}
+
+					ctx.ui.notify("Review cancelled", "info");
+					return;
+				}
+
+				revsetInput = editedRevset.trim();
+				break;
+			}
+
+			if (!revsetInput) {
+				ctx.ui.notify("Review cancelled", "info");
+				return;
+			}
+
+			const guidanceInput = await ctx.ui.editor("Additional review guidance (optional)");
+			if (guidanceInput === undefined) {
+				ctx.ui.notify("Review cancelled", "info");
+				return;
+			}
+
+			const revset = revsetInput;
+			const additionalGuidance = guidanceInput.trim() || undefined;
+			const quotedRevset = `'${revset.replace(/'/g, "'\\''")}'`;
+			const diffCommand = `jj --no-integrate-operation diff -r ${quotedRevset}`;
+			const reviewLabel = `revset '${revset}'`;
 
 			// Determine fresh session mode
 			const entries = ctx.sessionManager.getEntries();
@@ -241,7 +272,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				useFreshSession = choice === "Empty branch";
 			}
 
-			await executeReview(ctx, reviewLabel, diffCommand, useFreshSession);
+			await executeReview(ctx, reviewLabel, diffCommand, additionalGuidance, useFreshSession);
 		},
 	});
 
