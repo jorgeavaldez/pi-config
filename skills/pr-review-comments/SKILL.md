@@ -1,6 +1,6 @@
 ---
 name: pr-review-comments
-description: Fetches PR review comments from GitHub, batches similar comments together using semantic analysis, and walks through each batch one at a time with user confirmation between each. Tracks progress in REVIEW_COMMENT_WORK.md for resumability. Use when the user wants to address PR review feedback, fix review comments, or work through code review suggestions.
+description: Fetches PR review comments from GitHub, batches similar comments together using semantic analysis, and walks through each batch one at a time with user confirmation between each. Use when the user wants to address PR review feedback, fix review comments, or work through code review suggestions.
 ---
 
 # PR Review Comments Skill
@@ -24,33 +24,20 @@ Allowed GitHub-only actions when explicitly prompted:
 
 Important interpretation rules:
 
-- User approval to **"proceed"** with a review-comment batch means: edit files, run checks, update `REVIEW_COMMENT_WORK.md`, then stop and report. It is **not** permission to commit, move bookmarks, push, update the PR branch, or offer to do so.
+- User approval to **"proceed"** with a review-comment batch means: edit files, run checks, delete the processed comment files, then stop and report. It is **not** permission to commit, move bookmarks, push, update the PR branch, or offer to do so.
 - After local fixes are complete, stop and report that changes are local. Do **not** ask whether to update the PR branch.
 - Do not resolve GitHub review threads or acknowledge top-level review bodies until the corresponding fix is visible on the PR, unless the user explicitly asks you to resolve/acknowledge now.
 
 ## Workflow Overview
 
-1. Check if `REVIEW_COMMENT_WORK.md` exists in the current directory
-2. If **resuming**: Read the work file and continue from where you left off
-3. If **fresh start**: Fetch comments, analyze, batch, create work file, then begin
+1. Fetch comments into generated `*-review-feedback.md` files
+2. Analyze and batch comments in the active chat/session
+3. Present the triage overview and wait for user approval
 4. Work through batches ONE AT A TIME
-5. After each batch: update work file, delete processed comment files, ask for feedback
+5. After each batch: delete processed comment files, ask for feedback
 6. WAIT for user response before proceeding to next batch
 
-## Step 1: Check for Existing Work File
-
-First, check if `REVIEW_COMMENT_WORK.md` exists in the current working directory:
-
-```bash
-ls -la REVIEW_COMMENT_WORK.md 2>/dev/null
-```
-
-- **If it exists**: Go to [Resuming Work](#resuming-work)
-- **If it does not exist**: Go to [Fresh Start](#fresh-start)
-
----
-
-## Fresh Start
+## Step 1: Fetch PR Review Comments
 
 ### 1.1 Fetch PR Review Comments
 
@@ -119,57 +106,15 @@ For each batch, note:
 
 **Important**: A batch can be a single comment if it's unique. Don't force unrelated comments together.
 
-### 1.5 Create REVIEW_COMMENT_WORK.md
+### 1.5 Prepare In-Session Triage Summary
 
-Create the work file as a scratchpad and todo list. Use whatever format feels natural, but include:
+Keep the triage summary in the active chat/session instead of writing progress or status files to disk. Include:
 
 - **Triage Results**: Your analysis of each comment's validity
 - **Batches**: List each batch with its comments and grouping reasoning (only INCLUDE comments)
 - **Excluded**: Comments you recommend excluding with reasoning
-- **Status**: Mark each batch as pending/in-progress/done
-- **Current State**: Current phase (triage, awaiting approval, working, etc.)
-- **Notes**: Space for observations, decisions, anything relevant
-
-Example structure (adapt as needed):
-
-```markdown
-# PR Review Comment Work
-
-## Current State
-Phase: Awaiting triage approval
-
-## Triage Summary
-
-### Included (5 comments → 2 batches)
-| Comment | File | Issue | Verdict |
-|---------|------|-------|---------|
-| PRR_abc | auth.py:45 | Add try/catch | ✅ Valid |
-| PRR_def | user.py:112 | Handle network errors | ✅ Valid |
-| PRR_ghi | Header.tsx:23 | Typo "recieve" | ✅ Valid |
-
-### Questionable (1 comment)
-| Comment | File | Issue | Concern |
-|---------|------|-------|---------|
-| PRR_jkl | api.py:89 | Add rate limiting | ⚠️ Out of scope for this PR |
-
-### Excluded (1 comment)
-| Comment | File | Issue | Reason |
-|---------|------|-------|--------|
-| PRR_mno | utils.py:34 | Unused import | ❌ Import is actually used on line 156 |
-
-## Batches (pending approval)
-
-### Batch 1: Error Handling
-**Files**: auth.py, user.py
-**Comments**: PRR_abc, PRR_def
-
-### Batch 2: Typos
-**Files**: Header.tsx
-**Comments**: PRR_ghi
-
-## Notes
-- (scratchpad space)
-```
+- **Status**: Which batch is currently being discussed or worked
+- **Notes**: Observations, decisions, anything relevant
 
 ### 1.6 Present Triage Overview and Get Approval
 
@@ -199,13 +144,9 @@ Process user feedback:
 - **Adjust batches**: Merge, split, or reorder as requested
 - **Approve as-is**: Proceed to work
 
-Update `REVIEW_COMMENT_WORK.md` with any changes.
-
 If changes were made, present the updated overview and ask for approval again.
 
-Once approved, update work file:
-- Change "Phase" to "Working on Batch 1"
-- Mark batches as `[PENDING]`
+Once approved, proceed to the first batch.
 
 ### 1.8 Begin Working
 
@@ -213,33 +154,13 @@ Proceed to [Working on a Batch](#working-on-a-batch).
 
 ---
 
-## Resuming Work
-
-### 2.1 Read the Work File
-
-Read `REVIEW_COMMENT_WORK.md` to understand:
-- Current phase (triage approval, working, etc.)
-- Which batches exist and their status
-- Which are already done
-- Any notes or context from previous work
-
-### 2.2 Determine Next Action
-
-- If **awaiting triage approval**: Present the triage overview again and wait for approval (go to [Present Triage Overview](#16-present-triage-overview-and-get-approval))
-- If there are **pending batches**: Continue to [Working on a Batch](#working-on-a-batch)
-- If **all batches are done**: Inform the user that all review comments have been addressed
-
----
-
 ## Working on a Batch
 
-### 3.1 Update Work File - Mark In Progress
+### 2.1 Confirm Current Batch
 
-Before starting work, update `REVIEW_COMMENT_WORK.md`:
-- Mark the current batch as `[IN PROGRESS]`
-- Update "Current State" to reflect what you're working on
+Before starting work, state which batch is in progress in chat, including the comment IDs and files affected.
 
-### 3.2 Address the Comments
+### 2.2 Address the Comments
 
 **Use tasks for investigation, but make edits sequentially.**
 
@@ -266,7 +187,7 @@ After gathering investigation results, make the actual code changes **sequential
 
 **Important**: The comment files contain specific instructions. Follow them, especially the verification steps.
 
-### 3.3 Resolve Comments on GitHub
+### 2.3 Resolve Comments on GitHub
 
 Only resolve or acknowledge comments after the corresponding fix is visible on the PR, or after the user explicitly instructs you to resolve/acknowledge now. Local unpushed edits are not enough.
 
@@ -314,21 +235,15 @@ The acknowledgement reaction defaults to `EYES`; set `PR_REVIEW_ACK_REACTION` to
    }'
    ```
 
-### 3.4 Update Work File - Mark Done
+### 2.4 Delete Processed Comment Files
 
-After completing the batch:
+After completing the batch, delete the processed comment files for this batch:
 
-1. Update `REVIEW_COMMENT_WORK.md`:
-   - Mark the batch as `[DONE]`
-   - Add any notes about what was done or decisions made
-   - Update "Current State" to indicate completion of this batch
+```bash
+rm {comment-id}-review-feedback.md
+```
 
-2. Delete the processed comment files for this batch:
-   ```bash
-   rm {comment-id}-review-feedback.md
-   ```
-
-### 3.5 Ask for Feedback
+### 2.5 Ask for Feedback
 
 **STOP and ask the user**:
 
@@ -338,23 +253,22 @@ After completing the batch:
 
 **WAIT for the user's response.** Do not proceed until they respond. Do not treat "proceed" as permission to commit, move bookmarks, push, update the PR branch, offer source-control actions, or resolve GitHub comments.
 
-### 3.6 Handle User Response
+### 2.6 Handle User Response
 
-- If user provides **feedback**: Address it, update work file with notes, then ask again if ready to proceed
+- If user provides **feedback**: Address it, summarize what changed, then ask again if ready to proceed
 - If user says to **proceed**: Go to the next pending batch and repeat from [Working on a Batch](#working-on-a-batch)
-- If user says to **stop**: Update work file with current state and stop
+- If user says to **stop**: Stop without writing a progress/status file
 
 ---
 
 ## Completion
 
-When all batches are marked as done:
+When all batches are done:
 
-1. Update `REVIEW_COMMENT_WORK.md` to reflect completion
-2. Inform the user: "All PR review comments have been addressed locally."
-3. State clearly whether changes are only local or already visible on the PR
-4. Do **not** ask to update the PR branch, push, commit, move bookmarks, or otherwise mutate source control
-5. Optionally summarize what was done across all batches
+1. Inform the user: "All PR review comments have been addressed locally."
+2. State clearly whether changes are only local or already visible on the PR
+3. Do **not** ask to update the PR branch, push, commit, move bookmarks, or otherwise mutate source control
+4. Optionally summarize what was done across all batches
 
 ---
 
@@ -362,10 +276,8 @@ When all batches are marked as done:
 
 - **Use parallel tasks for comment investigation** - spawn tasks to analyze/investigate comments in parallel for faster triage and batch processing
 - **Make code edits sequentially** - tasks are for read-only investigation; actual edits should be done one at a time to avoid conflicts
-- **Always update REVIEW_COMMENT_WORK.md BEFORE asking for feedback**
 - **Always WAIT for user response between batches** - never auto-proceed
 - **Never mutate source control from this skill and never offer to do so** - no commits, bookmark moves, branch moves, pushes, rebases, amends, or prompts asking to update the PR branch
 - **Resolve comments on GitHub only after fixes are visible on the PR or explicit user instruction** - use the `resolve-pr-comment` skill
 - **Delete comment files after each batch** - not all at the end
-- **Trust the work file on resume** - don't re-fetch comments
-- **User can delete REVIEW_COMMENT_WORK.md to force a fresh start**
+- **Do not write progress/status files** - keep batching state in the active chat/session
