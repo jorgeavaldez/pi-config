@@ -15,7 +15,7 @@ When this skill is used to review, revise, refactor, or clean up existing code, 
 
 Do not edit files during audit-only mode. Do not run with the first issue you notice. Do not make a narrow patch and call it cleanup.
 
-First, inspect the full set of changed files fresh, including code from parent revisions that now belongs to the changed-file surface. Then produce a self-review audit and stop for user approval before modifying code.
+First, inspect the full set of changed files fresh, including code from parent revisions that now belongs to the changed-file surface. For generated or high-churn artifacts, inspect the path-specific diff and relevant source inputs instead of reading the artifact in full. Then produce a self-review audit and stop for user approval before modifying code.
 
 The audit must:
 
@@ -258,10 +258,23 @@ If the user is right, say so and fix it.
 
 ## Required Workflow
 
+### Context discipline for generated/high-churn artifacts
+
+Do not spend context reading large machine-generated or high-churn artifacts in full just because they are modified. This class includes lockfiles, generated clients/schemas/types, snapshots/golden files, fixture dumps, vendored or compiled output, minified bundles, source maps, SBOMs, coverage/build artifacts, and other files where most lines are deterministic tool output rather than authored code.
+
+For these files:
+
+- Use status/stat first to identify them.
+- Inspect the path-specific diff (`jj diff -- <path>` or the equivalent requested diff command) rather than the whole file.
+- Read the authored inputs that produced the artifact: manifests, schemas, generator configs, source templates, tests, or package declarations.
+- If dependency metadata matters, inspect only the relevant changed entries/hunks and verify with package-manager or catalog commands; do not page through the whole lockfile.
+- Treat the generated artifact as review evidence, not as code-quality surface, unless the diff suggests manual edits, suspicious generated output, security-sensitive dependency changes, or a generator/source mismatch.
+- If you believe a generated/high-churn artifact truly must be read in full, stop and explain why before doing it.
+
 ### Phase 1: Fresh intake, no edits
 
 1. Determine the changed scope with the appropriate source-control diff/status command.
-2. Read every modified file in full, or in complete chunks if large.
+2. Read every modified authored source, config, and test file in full, or in complete chunks if large. Do not read generated/high-churn artifacts in full; inspect only their diffs and relevant changed entries as described above.
 3. Read adjacent call sites/tests needed to understand whether exports and helpers are real boundaries or incidental seams.
 4. Search the changed scope for:
    - helper/wrapper/shim/alias/proxy/pass-through patterns;
