@@ -23,8 +23,9 @@ Opens a draft pull request on GitHub, handling jj (Jujutsu) and git repositories
    - Check remote for `main` or `master`
    - Default to `main`
 
-4. **Verify and inspect the PR diff:**
-   - Ensure `<head>` exists locally or on the remote and is synced to the remote before creating the PR
+4. **Inspect the PR diff:**
+   - Assume a user-provided `<head>` has already been pushed. Do not block PR creation for an explicit head by pre-verifying remote sync.
+   - If GitHub rejects PR creation because `<head>` is missing or not pushed, then report that error and ask the user to push.
    - If `<head>` is not the checked-out/current branch/bookmark, inspect/read the `<base>...<head>` diff and commit details before choosing the PR title/body
    - Derive PR details from the inspected `<head>` vs `<base>` changes, not from unrelated working-copy changes
 
@@ -46,8 +47,8 @@ Opens a draft pull request on GitHub, handling jj (Jujutsu) and git repositories
 - **ALWAYS** assign the PR to the current GitHub user (use `--assignee @me`)
 - Accept an explicit branch/bookmark/head name from the user and use it as `--head <name>`
 - If an explicit head differs from the current branch/bookmark, verify it and inspect its diff/commits before generating PR details
-- Ensure bookmark/branch is synced to remote before creating PR
-- If not synced, ask user to run `jj git push` or `git push` first
+- Assume explicit user-provided bookmark/branch names have already been pushed; do not preflight remote sync before `gh pr create`
+- If `gh pr create` fails because the head is absent or not pushed, ask user to run `jj git push` or `git push` first
 
 ## Example Usage
 
