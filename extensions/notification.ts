@@ -1,7 +1,7 @@
 /**
  * Notification Extension
  *
- * Notification backend priority (checked once at module load):
+ * Notification backend priority (checked once when the extension initializes outside Herdr):
  * 1) Pi Agent.app (if installed)
  * 2) osascript (native macOS notifications)
  * 3) OSC 777 in WezTerm
@@ -11,7 +11,7 @@
 import { existsSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { join } from "node:path";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { isToolCallEventType, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 type NotifyFn = (title: string, body: string) => void;
 
@@ -98,9 +98,13 @@ function resolveNotifier(): NotifyFn {
 	return () => {};
 }
 
-const notify = resolveNotifier();
-
 export default function (pi: ExtensionAPI) {
+	if (process.env.HERDR_ENV === "1") {
+		return;
+	}
+
+	const notify = resolveNotifier();
+
 	// Notify when agent finishes and is ready for input
 	pi.on("agent_end", async (_event, ctx) => {
 		if (!ctx.hasUI) {
@@ -115,18 +119,17 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 
-		const { toolName, input } = event;
+		if (!isToolCallEventType("bash", event)) {
+			return;
+		}
 
-		// Check for dangerous bash commands
-		if (toolName === "bash" && input.command) {
-			const cmd = input.command as string;
-			const dangerous = ["rm -rf", "sudo", "chmod", "chown", "mkfs", "dd if="].some(
-				(pattern) => cmd.includes(pattern)
-			);
+		const cmd = event.input.command;
+		const dangerous = ["rm -rf", "sudo", "chmod", "chown", "mkfs", "dd if="].some((pattern) =>
+			cmd.includes(pattern)
+		);
 
-			if (dangerous) {
-				notify("pi", `Dangerous command: ${cmd.substring(0, 50)}...`);
-			}
+		if (dangerous) {
+			notify("pi", `Dangerous command: ${cmd.substring(0, 50)}...`);
 		}
 	});
 }
