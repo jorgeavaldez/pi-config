@@ -12,7 +12,7 @@
  * The generated prompt appears as a draft in the editor for review/editing.
  */
 
-import { complete, type Message } from "@earendil-works/pi-ai";
+import { complete, type Message } from "@earendil-works/pi-ai/compat";
 import type { ExtensionAPI, ExtensionCommandContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 import { BorderedLoader, convertToLlm, serializeConversation } from "@earendil-works/pi-coding-agent";
 import { editTextExternally } from "./shared/editor-state.js";
@@ -41,13 +41,14 @@ Files involved:
 
 async function generateHandoffPrompt(
 	ctx: ExtensionCommandContext,
+	model: NonNullable<ExtensionCommandContext["model"]>,
 	conversationText: string,
 	goal: string,
 	signal?: AbortSignal,
 ): Promise<string | null> {
-	const auth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model!);
+	const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
 	if (!auth.ok || !auth.apiKey) {
-		throw new Error(auth.ok ? `No API key for ${ctx.model!.provider}` : auth.error);
+		throw new Error(auth.ok ? `No API key for ${model.provider}` : auth.error);
 	}
 
 	const userMessage: Message = {
@@ -62,7 +63,7 @@ async function generateHandoffPrompt(
 	};
 
 	const response = await complete(
-		ctx.model!,
+		model,
 		{ systemPrompt: SYSTEM_PROMPT, messages: [userMessage] },
 		{ apiKey: auth.apiKey, headers: auth.headers, signal },
 	);
@@ -81,12 +82,13 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("handoff", {
 		description: "Transfer context to a new focused session",
 		handler: async (args, ctx) => {
-			if (!ctx.hasUI) {
-				ctx.ui.notify("handoff requires interactive mode", "error");
+			if (ctx.mode !== "tui") {
+				ctx.ui.notify("handoff requires TUI mode", "error");
 				return;
 			}
 
-			if (!ctx.model) {
+			const model = ctx.model;
+			if (!model) {
 				ctx.ui.notify("No model selected", "error");
 				return;
 			}
@@ -115,12 +117,11 @@ export default function (pi: ExtensionAPI) {
 
 			let generationFailed = false;
 
-			// Interactive/TUI path: use custom loader UI
-			let result: string | null | undefined = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
-				const loader = new BorderedLoader(tui, theme, `Generating handoff prompt...`);
+			const result = await ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
+				const loader = new BorderedLoader(tui, theme, "Generating handoff prompt...");
 				loader.onAbort = () => done(null);
 
-				generateHandoffPrompt(ctx, conversationText, goal, loader.signal)
+				generateHandoffPrompt(ctx, model, conversationText, goal, loader.signal)
 					.then(done)
 					.catch((err) => {
 						generationFailed = true;
@@ -131,22 +132,7 @@ export default function (pi: ExtensionAPI) {
 				return loader;
 			});
 
-			// RPC fallback: custom() is unsupported and returns undefined
-			if (result === undefined) {
-				ctx.ui.setStatus("handoff", "Generating handoff prompt...");
-
-				try {
-					result = await generateHandoffPrompt(ctx, conversationText, goal);
-				} catch (err) {
-					generationFailed = true;
-					console.error("Handoff generation failed:", err);
-					result = null;
-				} finally {
-					ctx.ui.setStatus("handoff", undefined);
-				}
-			}
-
-			if (result === null || result === undefined) {
+			if (result === null) {
 				if (generationFailed) {
 					ctx.ui.notify("Failed to generate handoff prompt", "error");
 				} else {

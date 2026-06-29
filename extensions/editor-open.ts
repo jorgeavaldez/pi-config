@@ -162,7 +162,7 @@ export default function editorOpenExtension(pi: ExtensionAPI) {
   pi.registerShortcut("ctrl+g", {
     description: "Open editor with last message reference and prompt section",
     handler: async (ctx) => {
-      if (!ctx.hasUI) {
+      if (ctx.mode !== "tui") {
         return;
       }
 

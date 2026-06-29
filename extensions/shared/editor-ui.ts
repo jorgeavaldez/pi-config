@@ -114,6 +114,10 @@ export function promptEditorWithExternalEdit(
 	prefill: string,
 	tempFilePrefix: string,
 ): Promise<string | undefined> {
+	if (ctx.mode !== "tui") {
+		return Promise.resolve(undefined);
+	}
+
 	return ctx.ui.custom<string | undefined>((tui, theme, keybindings, done) => new ExternalEditableEditor(
 		tui,
 		keybindings,

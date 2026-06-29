@@ -107,6 +107,10 @@ export async function openInEditor(
   cursorLine: number | undefined,
   ctx: ExtensionContext
 ): Promise<number | null> {
+  if (ctx.mode !== "tui") {
+    return null;
+  }
+
   const editor = getEditor();
   const editorArgs = getEditorArgs(filepath, cursorLine);
 

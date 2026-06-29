@@ -12,13 +12,13 @@
  *   - Fuzzy file search using fd when available
  *   - Search mode requires files to exist in the resolved prompts directory
  *
- * Files stored in: <vaultPath>/prompts from obsidian.json, with fallback to ~/.pi/prompts
+ * Files stored in: <vaultPath>/prompts from obsidian.json, with fallback to the pi config prompts directory
  */
 
 import { existsSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, basename } from "node:path";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { DynamicBorder } from "@earendil-works/pi-coding-agent";
 import {
   Container,
@@ -187,11 +187,14 @@ function resolvePromptFile(
   }
 
   const isFullPath = trimmed.startsWith("/") || trimmed.startsWith("~");
-  const expanded = isFullPath ? expandTilde(trimmed) : null;
 
   // Normalize: add .md if missing
   const normalized = trimmed.endsWith(".md") ? trimmed : trimmed + ".md";
-  const fullPath = isFullPath ? (expanded!.endsWith(".md") ? expanded! : expanded + ".md") : join(promptsDir, normalized);
+  let fullPath = join(promptsDir, normalized);
+  if (isFullPath) {
+    const expanded = expandTilde(trimmed);
+    fullPath = expanded.endsWith(".md") ? expanded : expanded + ".md";
+  }
 
   if (mode === "search") {
     // Search mode: file must exist
@@ -206,9 +209,6 @@ function resolvePromptFile(
 /**
  * Custom dialog component for file selection with two modes.
  */
-// Theme type extracted from the ctx.ui.custom callback
-type Theme = Parameters<Parameters<ExtensionCommandContext["ui"]["custom"]>[0]>[1];
-
 class FileSelectDialog extends Container implements Focusable {
   private mode: "new" | "search" = "new";
   private input: Input;
@@ -499,6 +499,10 @@ class FileSelectDialog extends Container implements Focusable {
  * Returns the full filepath or undefined if cancelled.
  */
 async function promptForFile(ctx: ExtensionCommandContext, promptsDir: string): Promise<string | undefined> {
+  if (ctx.mode !== "tui") {
+    return undefined;
+  }
+
   return new Promise((resolve) => {
     ctx.ui.custom<{ path: string; mode: "new" | "search" } | null>((tui, theme, _kb, done) => {
       const dialog = new FileSelectDialog(tui, theme, promptsDir, (result) => {
@@ -638,8 +642,8 @@ export default function editPromptExtension(pi: ExtensionAPI) {
       const PROMPTS_DIR = getPromptsDir(ctx.cwd);
 
       // 1. Check UI availability
-      if (!ctx.hasUI) {
-        ctx.ui.notify("/edit requires interactive mode", "error");
+      if (ctx.mode !== "tui") {
+        ctx.ui.notify("/edit requires TUI mode", "error");
         return;
       }
 

@@ -209,8 +209,8 @@ export default function reviewExtension(pi: ExtensionAPI) {
 	pi.registerCommand("review", {
 		description: "Review code changes with an interactive revset and optional guidance prompt.",
 		handler: async (args, ctx) => {
-			if (!ctx.hasUI) {
-				ctx.ui.notify("Review requires interactive mode", "error");
+			if (ctx.mode !== "tui") {
+				ctx.ui.notify("Review requires TUI mode", "error");
 				return;
 			}
 
@@ -281,8 +281,8 @@ export default function reviewExtension(pi: ExtensionAPI) {
 	pi.registerCommand("end-review", {
 		description: "Complete review and return to original position",
 		handler: async (_args, ctx) => {
-			if (!ctx.hasUI) {
-				ctx.ui.notify("End-review requires interactive mode", "error");
+			if (ctx.mode !== "tui") {
+				ctx.ui.notify("End-review requires TUI mode", "error");
 				return;
 			}
 
@@ -309,7 +309,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 					const loader = new BorderedLoader(tui, theme, "Summarizing review branch...");
 					loader.onAbort = () => done(null);
 
-					ctx.navigateTree(originId!, {
+					ctx.navigateTree(originId, {
 						summarize: true,
 						customInstructions: REVIEW_SUMMARY_PROMPT,
 						replaceInstructions: true,
@@ -345,7 +345,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				ctx.ui.notify("Review complete! Returned to original position.", "info");
 			} else {
 				try {
-					const result = await ctx.navigateTree(originId!, { summarize: false });
+					const result = await ctx.navigateTree(originId, { summarize: false });
 
 					if (result.cancelled) {
 						ctx.ui.notify("Navigation cancelled. Use /end-review to try again.", "info");

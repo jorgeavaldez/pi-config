@@ -57,30 +57,21 @@ function getInstalledPiInfo() {
   const piPackageRoot = path.dirname(path.dirname(piCliPath));
   const piPackageJsonPath = path.join(piPackageRoot, "package.json");
   const piPackageJson = JSON.parse(fs.readFileSync(piPackageJsonPath, "utf8"));
-  const typeboxPackageJsonPath = path.join(
-    piPackageRoot,
-    "node_modules",
-    "typebox",
-    "package.json"
-  );
-  const typeboxPackageJson = JSON.parse(fs.readFileSync(typeboxPackageJsonPath, "utf8"));
 
   return {
-    piPackageRoot,
     piPackageJson,
-    typeboxPackageJson,
   };
 }
 
 const workspacePackageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-const { piPackageJson: installedPiPackageJson, typeboxPackageJson } = getInstalledPiInfo();
+const { piPackageJson: installedPiPackageJson } = getInstalledPiInfo();
 
 const pinnedVersions = {
   "@earendil-works/pi-coding-agent": stripVersion(installedPiPackageJson.version),
   "@earendil-works/pi-agent-core": stripVersion(installedPiPackageJson.dependencies["@earendil-works/pi-agent-core"]),
   "@earendil-works/pi-ai": stripVersion(installedPiPackageJson.dependencies["@earendil-works/pi-ai"]),
   "@earendil-works/pi-tui": stripVersion(installedPiPackageJson.dependencies["@earendil-works/pi-tui"]),
-  "typebox": stripVersion(typeboxPackageJson.version),
+  "typebox": stripVersion(installedPiPackageJson.dependencies.typebox),
 };
 
 workspacePackageJson.peerDependencies ??= {};

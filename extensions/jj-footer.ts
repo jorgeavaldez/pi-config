@@ -1,4 +1,4 @@
-import { SettingsManager, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { SettingsManager, type ExtensionAPI, type ExtensionContext, type Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -27,9 +27,7 @@ type JjStatusInfo = {
 	distance: number;
 };
 
-type FooterTheme = {
-	fg: (color: any, text: string) => string;
-};
+type FooterTheme = Pick<Theme, "fg">;
 
 /**
  * Sanitize text for display in a single-line status.
@@ -288,7 +286,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	function setFooter(ctx: ExtensionContext) {
-		if (!ctx.hasUI) return;
+		if (ctx.mode !== "tui") return;
 
 		if (!enabled) {
 			ctx.ui.setFooter(undefined);
@@ -318,8 +316,8 @@ export default function (pi: ExtensionAPI) {
 
 					for (const entry of ctx.sessionManager.getEntries()) {
 						if (entry.type !== "message") continue;
-						const message = entry.message as any;
-						if (message?.role !== "assistant" || !message.usage) continue;
+						const message = entry.message;
+						if (message.role !== "assistant" || !message.usage) continue;
 						totalInput += message.usage.input;
 						totalOutput += message.usage.output;
 						totalCacheRead += message.usage.cacheRead;
@@ -532,7 +530,7 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("session_start", async (_event, ctx) => {
-		if (!ctx.hasUI) {
+		if (ctx.mode !== "tui") {
 			return;
 		}
 
@@ -550,7 +548,7 @@ export default function (pi: ExtensionAPI) {
 		// pi 0.69 invalidates pre-reload / pre-replacement extension contexts.
 		// Restore the built-in footer before teardown so the old custom footer
 		// cannot render with a stale ctx during reload/session replacement.
-		if (ctx.hasUI) {
+		if (ctx.mode === "tui") {
 			ctx.ui.setFooter(undefined);
 		}
 	});
