@@ -1,6 +1,6 @@
 ---
 name: code-quality
-description: Audit-first strict code quality review. Use before and after non-trivial code edits, when refactoring, when the user asks to revise/review/cleanup, or when user flags abstraction/type/API/code smell. Requires a full self-review audit and approval before cleanup edits.
+description: Audit-first strict code quality review. Use before and after non-trivial code edits, when refactoring, when the user asks to revise/review/cleanup, or when user flags abstraction/type/API/code smell. Defaults to the current working-copy/current-revision diff; do not ask what to review unless the user requested a non-default scope that cannot be inferred. Requires a full self-review audit and approval before cleanup edits.
 ---
 
 # Code Quality
@@ -12,6 +12,8 @@ These rules are mandatory for all languages and all code changes.
 ## Non-Negotiable Process
 
 When this skill is used to review, revise, refactor, or clean up existing code, begin in **audit-only mode**.
+
+Do not ask what to review when the user invokes this skill without an explicit comparison scope. The default scope is the current working-copy/current-revision diff against its parent. Start with `jj status` and `jj diff --stat` (or the repository's equivalent read-only status/diff commands) and proceed from that changed surface. Only ask a scope question when the user explicitly requested a non-default comparison, such as a branch/bookmark/base range, and the endpoints cannot be inferred after read-only inspection.
 
 Do not edit files during audit-only mode. Do not run with the first issue you notice. Do not make a narrow patch and call it cleanup.
 
@@ -273,7 +275,7 @@ For these files:
 
 ### Phase 1: Fresh intake, no edits
 
-1. Determine the changed scope with the appropriate source-control diff/status command.
+1. Determine the changed scope with the appropriate source-control diff/status command. By default, use the current working-copy/current-revision diff against its parent and do not ask for clarification first. If that default scope is empty, say so and ask whether to inspect a branch/bookmark/base range; do not block before checking the default scope.
 2. Read every modified authored source, config, and test file in full, or in complete chunks if large. Do not read generated/high-churn artifacts in full; inspect only their diffs and relevant changed entries as described above.
 3. Read adjacent call sites/tests needed to understand whether exports and helpers are real boundaries or incidental seams.
 4. Search the changed scope for:
