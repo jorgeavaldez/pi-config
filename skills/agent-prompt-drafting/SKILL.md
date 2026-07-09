@@ -24,6 +24,7 @@ Agent prompts must explicitly say:
 - what context matters and what artifact/output is expected;
 - how much detail is required in the plan or report;
 - what exact workspace/revision/pane/session/tree continuation the task belongs to when known;
+- that the sender must clear any existing staged input in the target Pi pane before submitting the prompt;
 - for plan-based parallel work, what shared plan anchors the work and how this agent's seam fits sibling workstreams.
 
 If the user asks for planning, investigation, review, or a proposal, the prompt must say **planning only** and **do not modify files** unless the user explicitly authorized edits.
@@ -52,6 +53,7 @@ Before sending a prompt to another agent:
    - Default for implementation prompts: edits allowed only for the named scope.
 5. Draft the prompt with explicit mode, allowed edits/scope, task, expected output, and stop conditions.
 6. Re-read the prompt before sending and check for verbs that accidentally authorize edits.
+7. Immediately before sending to an existing Pi pane, clear the target input box first. Never append a new prompt onto staged text already sitting in the input.
 
 Do not send prompts with ambiguous verbs like “revise”, “fix”, “clean up”, “update”, “take into account”, or “incorporate” unless the prompt also explicitly says whether that means planning-only or code edits.
 
@@ -366,6 +368,7 @@ Avoid these in agent prompts:
 
 Before sending, answer yes to all:
 
+- Is the target Pi input box confirmed clean, or will it be cleared immediately before submitting?
 - Is the mode explicit?
 - Are edit permissions explicit?
 - Is the approval gate explicit if this is planning/revision/design/schema work?

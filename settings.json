@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.80.2",
+  "lastChangelogVersion": "0.80.6",
   "defaultThinkingLevel": "high",
   "theme": "light/dark",
   "enabledModels": [
@@ -10,11 +10,12 @@
     "openai-codex/gpt-5.3-codex-spark",
     "anthropic/claude-fable-5",
     "opencode/deepseek-v4-pro",
-    "opencode/deepseek-v4-flash"
+    "opencode/deepseek-v4-flash",
+    "openai-codex/gpt-5.6-sol"
   ],
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5",
+  "defaultModel": "gpt-5.6-sol",
   "shellPath": "/bin/zsh",
   "shellCommandPrefix": "source ~/.zprofile >/dev/null 2>&1",
   "skills": [

@@ -35,6 +35,7 @@ Do not do implementation, review-fix, investigation, or long-context work in the
 - Always inventory live Herdr state before acting.
 - Always map `task -> workspace -> tab -> pane -> session/tree -> cwd -> revision` before delegating or queueing.
 - Always use `agent-prompt-drafting` before drafting or sending instructions to another agent.
+- Always ensure the target Pi input box is clean before sending a prompt; never append a prompt to whatever text is already staged in the input.
 - For plan-based parallel delegation, anchor every child prompt to the shared plan and include the sibling workstream map, owned seam, expected inputs, and final integration path.
 - Fork from a finalized plan/session only when Jorge asked or approved and context is manageable; otherwise start fresh and pass the plan path plus concise task-local context.
 - Treat “that agent,” “same agent,” “from this point in the session tree,” “use `/tree`,” and similar language as a session-routing requirement.
@@ -204,6 +205,11 @@ Prompt shape for each child:
 
 Before writing any delegated prompt, load and apply `agent-prompt-drafting`.
 This is mandatory even when the prompt is short or nested inside a watcher.
+
+Before sending any prompt into an existing Pi pane, confirm the agent is not `working`, then clear any staged input first.
+Use the Pi clear-input key sequence for an idle Pi pane before `herdr pane send-text` / `herdr pane send-keys Enter` / `herdr pane run`.
+If you cannot confidently clear the input without interrupting work or exiting the agent, stop and ask instead of sending.
+Never assume the input box is empty just because the agent is idle or because recent scrollback looks complete.
 
 Every delegated prompt should be narrow and operational, and must make mode/edit permissions explicit:
 
