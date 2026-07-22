@@ -86,10 +86,9 @@ Filename rules:
 3. If a missing answer would materially affect the plan, STOP and ask.
 4. Write or update the plan.
 5. Do one self-review focused on blocker-level gaps, contradictions, and missing implementation details.
-6. Optionally run at most one review task only if the work is unusually cross-cutting or high-risk.
-7. If you run a review task, ask it for at most the top 5 blocker/high-risk issues.
-8. Incorporate only material fixes.
-9. Stop once the plan is implementation-ready.
+6. For unusually cross-cutting or high-risk work, make that review a distinct second pass and identify at most the top 5 blocker/high-risk issues.
+7. Incorporate only material fixes.
+8. Stop once the plan is implementation-ready.
 
 ## Required plan content
 
@@ -126,20 +125,13 @@ Include:
 - Do not include full code implementations. Use short snippets only when they remove material ambiguity.
 - When updating an existing plan, edit it so it reads as if it was always written that way.
 
-## Review-task rules
+## Review rules
 
-If you use a `task` review:
-- ask for filtered findings only
-- ask for the top blocker/high-risk issues only
-- do not ask for exhaustive nitpicks
-- do not chain multiple review tasks
-- do not re-run review unless the first review surfaced a real blocker that required a substantial rewrite
-
-Example review prompt shape:
-
-```text
-Read <plan-file>. Return at most 5 blocker/high-risk issues only. Focus on contradictions, missing implementation details, auth/visibility gaps, dependency gaps, or places a receiving engineer would still need to rediscover core context. Ignore editorial nits.
-```
+For the optional second review pass:
+- return at most 5 blocker/high-risk issues
+- focus on contradictions, missing implementation details, auth/visibility gaps, dependency gaps, or places a receiving engineer would still need to rediscover core context
+- ignore editorial nits
+- do not repeat the pass unless it surfaced a real blocker that required a substantial rewrite
 
 ## Response to the user
 

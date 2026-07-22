@@ -12,7 +12,7 @@ Custom `Ctrl+G` prompt drafting flow with message reference context.
 
 When you press `Ctrl+G`:
 
-1. The extension reads the **last message content** from the current session branch.
+1. The extension reads the latest non-tool message from the current session branch when one is available.
 2. It creates a timestamped section with HTML comment delimiters.
 3. It opens your editor at the prompt section.
 4. On save/quit, it extracts only the prompt section and sends it as a new user message.
@@ -40,8 +40,8 @@ Extraction behavior:
 
 ```json
 {
-  "externalEditor": []
+  "app.editor.external": []
 }
 ```
 
-This unbinds pi's built-in `externalEditor` action from `Ctrl+G`, allowing `editor-open` to handle `Ctrl+G` via extension shortcut.
+This unbinds Pi's built-in `app.editor.external` action from `Ctrl+G`, allowing `editor-open` to handle `Ctrl+G` through its extension shortcut.

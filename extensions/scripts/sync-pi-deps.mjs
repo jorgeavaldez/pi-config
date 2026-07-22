@@ -54,13 +54,23 @@ function findPiBinary() {
 function getInstalledPiInfo() {
   const piBin = findPiBinary();
   const piCliPath = fs.realpathSync(piBin);
-  const piPackageRoot = path.dirname(path.dirname(piCliPath));
-  const piPackageJsonPath = path.join(piPackageRoot, "package.json");
-  const piPackageJson = JSON.parse(fs.readFileSync(piPackageJsonPath, "utf8"));
+  let currentDir = path.dirname(piCliPath);
 
-  return {
-    piPackageJson,
-  };
+  while (true) {
+    const piPackageJsonPath = path.join(currentDir, "package.json");
+    if (fs.existsSync(piPackageJsonPath)) {
+      const piPackageJson = JSON.parse(fs.readFileSync(piPackageJsonPath, "utf8"));
+      if (piPackageJson.name === "@earendil-works/pi-coding-agent") {
+        return { piPackageJson };
+      }
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) break;
+    currentDir = parentDir;
+  }
+
+  throw new Error(`Could not find @earendil-works/pi-coding-agent package.json for ${piCliPath}`);
 }
 
 const workspacePackageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));

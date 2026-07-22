@@ -424,14 +424,12 @@ Fork that cleanup agent from the final serial integration agent only when Jorge 
 
 For task files, focus notes, reminders, prompt drafting, handoffs, or vault cleanup, delegate to the appropriate bookkeeping skill/agent instead of mixing that work into an implementation pane.
 
-Use the matching skill when applicable:
+Use the matching loaded skill when applicable:
 
-- reminders or task creation: `remind-me`
-- task/focus triage: `triage-inbox`
-- PR-aware work triage: `work-pr-triage`
-- prompt drafting: `draft-prompt`
+- prompt drafting: `agent-prompt-drafting`
 - handoff/overview docs: `dump-overview` or `dump-overview-to-plan`
-- doc migration: `migrate-doc`
+
+For reminders, task/focus triage, PR-aware triage, or document migration, delegate only when a matching skill is currently loaded. Otherwise keep explicitly requested bookkeeping in a dedicated pane or ask the user how to route it.
 
 Give the bookkeeping agent a precise summary and desired file updates.
 Do not make it infer state from other agents.

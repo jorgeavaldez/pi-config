@@ -1,13 +1,16 @@
 # Private - credentials
 auth.json
 
+# Generated model catalog cache
+models-store.json
+
 # Private - session history
 sessions/
 
 # Private - skills
 private-skills/
 
-# Dependencies - regenerate with: cd extensions && npm install
+# Dependencies - regenerate with: cd extensions && bun install
 extensions/node_modules/
 
 PLAN.md

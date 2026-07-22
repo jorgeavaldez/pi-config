@@ -57,14 +57,9 @@ CRITICAL: Actively verify that changed code aligns with the rest of the codebase
 
 Web search is acceptable and encouraged when verifying external APIs or dependencies.
 
-## Using Subtasks
+## Using Tools
 
-For complex reviews, use subtasks to parallelize verification work:
-- Spawn subtasks to verify different external APIs or dependencies concurrently
-- Use subtasks to search the codebase for contract violations in parallel
-- Delegate doc lookups or web searches for multiple libraries simultaneously
-
-This speeds up thorough reviews significantly.
+Use available read, search, and web tools directly. Batch independent read-only lookups when supported, but keep the final analysis integrated in this review.
 
 ## Review Priorities
 

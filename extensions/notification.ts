@@ -105,8 +105,8 @@ export default function (pi: ExtensionAPI) {
 
 	const notify = resolveNotifier();
 
-	// Notify when agent finishes and is ready for input
-	pi.on("agent_end", async (_event, ctx) => {
+	// Notify only after retries, compaction, and queued continuations have settled.
+	pi.on("agent_settled", async (_event, ctx) => {
 		if (!ctx.hasUI) {
 			return;
 		}

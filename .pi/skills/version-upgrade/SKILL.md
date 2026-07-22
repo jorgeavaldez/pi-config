@@ -36,8 +36,25 @@ features, and behavioral changes that may interact with custom extensions.
 
 ```bash
 PI_BIN="$(which pi)"
-PI_CLI_PATH="$(node -e "const fs=require('fs'); console.log(fs.realpathSync(process.argv[1]))" "$PI_BIN")"
-PI_PACKAGE_ROOT="$(node -e "const path=require('path'); console.log(path.dirname(path.dirname(process.argv[1])))" "$PI_CLI_PATH")"
+PI_PACKAGE_ROOT="$(node -e '
+const fs = require("fs");
+const path = require("path");
+let dir = path.dirname(fs.realpathSync(process.argv[1]));
+while (true) {
+  const candidate = path.join(dir, "package.json");
+  if (fs.existsSync(candidate)) {
+    const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
+    if (pkg.name === "@earendil-works/pi-coding-agent") {
+      console.log(dir);
+      process.exit(0);
+    }
+  }
+  const parent = path.dirname(dir);
+  if (parent === dir) break;
+  dir = parent;
+}
+throw new Error("Could not find the installed pi package root");
+' "$PI_BIN")"
 cat "$PI_PACKAGE_ROOT/CHANGELOG.md"
 ```
 
@@ -46,14 +63,11 @@ exclusive of the old).
 
 ## Step 2: Audit Extensions
 
-Read every extension file. Use subagents or parallel tasks for breadth:
+Read every extension file. Use available read-only tools directly and batch independent lookups when supported.
 
 ### Files to audit
 
-- All `.ts` files directly under `extensions/`
-- All `.ts` files under `extensions/shared/`
-- All `.ts` files under `extensions/task/`
-- All `.ts` files under `extensions/subagent/`
+- All authored `.ts` files recursively under `extensions/`, excluding `node_modules` and generated/vendor directories
 - `extensions/package.json`
 
 ### What to check in each file
@@ -82,17 +96,25 @@ For each extension file, check for:
 When an extension monkey-patches or overrides a pi internal, compare against both the
 old and new versions:
 
+Standalone installs do not include the package's `dist/` source tree. Extract the
+published packages into a temporary directory when implementation comparison is needed:
+
 ```bash
-# Find old version path
-OLD="/Users/jorge/.local/share/mise/installs/npm-mariozechner-pi-coding-agent/<OLD_VERSION>/lib/node_modules/@mariozechner/pi-coding-agent/"
+TMP="$(mktemp -d /tmp/pi-upgrade-audit.XXXXXX)"
+OLD_TARBALL="$(npm pack "@earendil-works/pi-coding-agent@<OLD_VERSION>" --pack-destination "$TMP" --silent)"
+NEW_TARBALL="$(npm pack "@earendil-works/pi-coding-agent@<NEW_VERSION>" --pack-destination "$TMP" --silent)"
+mkdir -p "$TMP/old" "$TMP/new"
+tar -xzf "$TMP/$OLD_TARBALL" -C "$TMP/old"
+tar -xzf "$TMP/$NEW_TARBALL" -C "$TMP/new"
+OLD="$TMP/old/package"
+NEW="$TMP/new/package"
 
-# Find new version path  
-NEW="/Users/jorge/.local/share/mise/installs/npm-mariozechner-pi-coding-agent/<NEW_VERSION>/lib/node_modules/@mariozechner/pi-coding-agent/"
-
-# Compare specific implementations
-diff <(grep -A50 'methodName' "$OLD/node_modules/@mariozechner/pi-tui/dist/autocomplete.js") \
-     <(grep -A50 'methodName' "$NEW/node_modules/@mariozechner/pi-tui/dist/autocomplete.js")
+# Compare a pi-coding-agent implementation
+diff -u "$OLD/dist/core/model-registry.js" "$NEW/dist/core/model-registry.js"
 ```
+
+For files owned by another package, pack that package directly instead of assuming it is
+nested under `pi-coding-agent`.
 
 ## Step 3: Audit Configuration Files
 
@@ -151,7 +173,7 @@ Include same detail as Critical.
 
 - **DO NOT modify any files.** This skill is read-only / investigation-only.
 - **DO NOT commit, stage, push, or alter jj/git history.**
-- Use subagents and parallel tasks liberally for thorough coverage.
+- Batch independent read-only inspection commands when supported.
 - Read actual source code — do not guess or assume API compatibility.
 - Compare old vs new pi source when relevant.
 - Report even minor or cosmetic issues — completeness over brevity.

@@ -1,3 +1,4 @@
+import type { Usage } from "@earendil-works/pi-ai";
 import { SettingsManager, type ExtensionAPI, type ExtensionContext, type Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { execFile } from "node:child_process";
@@ -313,16 +314,26 @@ export default function (pi: ExtensionAPI) {
 					let totalCacheRead = 0;
 					let totalCacheWrite = 0;
 					let totalCost = 0;
+					let latestCacheHitRate: number | undefined;
 
 					for (const entry of ctx.sessionManager.getEntries()) {
-						if (entry.type !== "message") continue;
-						const message = entry.message;
-						if (message.role !== "assistant" || !message.usage) continue;
-						totalInput += message.usage.input;
-						totalOutput += message.usage.output;
-						totalCacheRead += message.usage.cacheRead;
-						totalCacheWrite += message.usage.cacheWrite;
-						totalCost += message.usage.cost.total;
+						let usage: Usage | undefined;
+						if (entry.type === "message" && entry.message.role === "assistant") {
+							usage = entry.message.usage;
+							const promptTokens = usage.input + usage.cacheRead + usage.cacheWrite;
+							latestCacheHitRate = promptTokens > 0 ? (usage.cacheRead / promptTokens) * 100 : undefined;
+						} else if (entry.type === "message" && entry.message.role === "toolResult") {
+							usage = entry.message.usage;
+						} else if ((entry.type === "branch_summary" || entry.type === "compaction") && entry.usage) {
+							usage = entry.usage;
+						}
+
+						if (!usage) continue;
+						totalInput += usage.input;
+						totalOutput += usage.output;
+						totalCacheRead += usage.cacheRead;
+						totalCacheWrite += usage.cacheWrite;
+						totalCost += usage.cost.total;
 					}
 
 					// Calculate context usage from ctx (handles compaction correctly)
@@ -390,9 +401,14 @@ export default function (pi: ExtensionAPI) {
 					if (totalOutput) statsParts.push(`↓${formatTokens(totalOutput)}`);
 					if (totalCacheRead) statsParts.push(`R${formatTokens(totalCacheRead)}`);
 					if (totalCacheWrite) statsParts.push(`W${formatTokens(totalCacheWrite)}`);
+					if ((totalCacheRead > 0 || totalCacheWrite > 0) && latestCacheHitRate !== undefined) {
+						statsParts.push(`CH${latestCacheHitRate.toFixed(1)}%`);
+					}
 
-					// Show cost with "(sub)" indicator if using OAuth subscription
-					const usingSubscription = model ? ctx.modelRegistry.isUsingOAuth(model) : false;
+					// Kimi Coding is subscription-backed despite using API-key authentication.
+					const usingSubscription = model
+						? model.provider === "kimi-coding" || ctx.modelRegistry.isUsingOAuth(model)
+						: false;
 					if (totalCost || usingSubscription) {
 						const costStr = `$${totalCost.toFixed(3)}${usingSubscription ? " (sub)" : ""}`;
 						statsParts.push(costStr);

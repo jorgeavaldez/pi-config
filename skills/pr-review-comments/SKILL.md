@@ -62,34 +62,20 @@ Each file contains:
 - The review comment content
 - Instructions for verification
 
-### 1.3 Pre-analyze Comments for Validity (Use Parallel Tasks)
+### 1.3 Pre-analyze Comments for Validity
 
-**Use the `task` tool to investigate comments in parallel.** Spawn a task for each comment file to analyze it independently. This significantly speeds up the triage process.
-
-For each comment, the task should read the comment file, examine the relevant code and context, and determine:
+Analyze every comment in the active session. Read its feedback file, inspect the referenced code and surrounding context, and determine:
 
 - **Is it correct?** Does the suggestion actually apply? Is it based on a misunderstanding?
 - **Is it appropriate for this PR?** Too minor? Too large/out of scope?
 - **Is it already addressed?** Sometimes code has changed since the comment was made
 
-Example task invocation:
-
-```
-task({
-  tasks: [
-    { description: "Analyze PR comment PRRC_abc-review-feedback.md: Read the comment file, examine the referenced code at [file:line], determine if the feedback is valid/applicable. Return: comment ID, file:line, issue summary, verdict (INCLUDE/QUESTIONABLE/EXCLUDE), and reasoning." },
-    { description: "Analyze PR comment PRRC_def-review-feedback.md: Read the comment file, examine the referenced code at [file:line], determine if the feedback is valid/applicable. Return: comment ID, file:line, issue summary, verdict (INCLUDE/QUESTIONABLE/EXCLUDE), and reasoning." },
-    // ... one task per comment file
-  ]
-})
-```
-
-Each task should classify its comment as:
+Classify each comment as:
 - ✅ **INCLUDE**: Valid and should be addressed
 - ⚠️ **QUESTIONABLE**: Might not be valid or appropriate (explain why)
 - ❌ **EXCLUDE**: Incorrect or not applicable (explain why)
 
-Collect results from all tasks before proceeding to batching.
+Use available read/search tools directly, batching independent read-only lookups when supported. Collect all classifications before proceeding to batching.
 
 ### 1.4 Batch Comments by Semantic Similarity
 
@@ -162,20 +148,7 @@ Before starting work, state which batch is in progress in chat, including the co
 
 ### 2.2 Address the Comments
 
-**Use tasks for investigation, but make edits sequentially.**
-
-If the batch has multiple comments, consider using parallel tasks to investigate each comment's context before making changes:
-
-```
-task({
-  tasks: [
-    { description: "Investigate comment PRRC_abc: Read [file] around line [N], understand the current implementation, and recommend the specific change needed to address: '[comment summary]'. Do NOT make edits." },
-    { description: "Investigate comment PRRC_def: Read [file] around line [N], understand the current implementation, and recommend the specific change needed to address: '[comment summary]'. Do NOT make edits." },
-  ]
-})
-```
-
-After gathering investigation results, make the actual code changes **sequentially** (to avoid edit conflicts):
+Investigate each comment with the available read/search tools, then make code changes **sequentially** to avoid edit conflicts:
 
 1. Read the relevant file(s)
 2. Understand the feedback and the surrounding code
@@ -274,8 +247,8 @@ When all batches are done:
 
 ## Key Reminders
 
-- **Use parallel tasks for comment investigation** - spawn tasks to analyze/investigate comments in parallel for faster triage and batch processing
-- **Make code edits sequentially** - tasks are for read-only investigation; actual edits should be done one at a time to avoid conflicts
+- **Complete comment investigation before editing** - batch independent read-only lookups when supported
+- **Make code edits sequentially** - actual edits should be done one at a time to avoid conflicts
 - **Always WAIT for user response between batches** - never auto-proceed
 - **Never mutate source control from this skill and never offer to do so** - no commits, bookmark moves, branch moves, pushes, rebases, amends, or prompts asking to update the PR branch
 - **Resolve comments on GitHub only after fixes are visible on the PR or explicit user instruction** - use the `resolve-pr-comment` skill
