@@ -8,9 +8,7 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { TUI, Component } from "@earendil-works/pi-tui";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
 
 // =============================================================================
 // Module State
@@ -141,57 +139,6 @@ export async function openInEditor(
     };
     return emptyComponent;
   });
-}
-
-export interface ExternalTextEditOptions {
-  tempFilePrefix?: string;
-  cursorLine?: number;
-}
-
-/**
- * Edit prefilled text through the configured external editor.
- *
- * Return values:
- * - string: user committed edits
- * - undefined: user cancelled/aborted
- * - null: runtime/protocol error
- */
-export async function editTextExternally(
-  initialText: string,
-  ctx: ExtensionContext,
-  options: ExternalTextEditOptions = {}
-): Promise<string | undefined | null> {
-  const tempDir = mkdtempSync(join(tmpdir(), options.tempFilePrefix ?? "pi-external-edit-"));
-  const tempFile = join(tempDir, "buffer.md");
-
-  try {
-    writeFileSync(tempFile, initialText, "utf-8");
-
-    const cursorLine = options.cursorLine ?? 1;
-    const exitCode = await openInEditor(tempFile, cursorLine, ctx);
-
-    if (exitCode === null) {
-      return null;
-    }
-
-    if (exitCode === 1) {
-      return undefined;
-    }
-
-    if (exitCode !== 0) {
-      return null;
-    }
-
-    return readFileSync(tempFile, "utf-8");
-  } catch {
-    return null;
-  } finally {
-    try {
-      rmSync(tempDir, { recursive: true, force: true });
-    } catch {
-      // Ignore cleanup failures.
-    }
-  }
 }
 
 // =============================================================================

@@ -48,10 +48,6 @@ The vault layout is intentionally plain:
 
 Provides Exa-backed `websearch` and `webfetch` tools for real-time web search and page fetching.
 
-### handoff
-
-`/handoff <goal>` generates an editable, self-contained prompt and starts a new session linked to the current one. Compacted sessions preserve their latest summary and retained context.
-
 ### notification
 
 Sends a desktop notification when an agent run fully settles outside Herdr. It also warns when the agent requests a potentially dangerous shell command.
@@ -85,7 +81,7 @@ Behavior:
 
 `editor-env` sets `EDITOR`/`VISUAL` to `~/.config/nvim/bin/pi-nvim-editor` when available.
 
-This gives `/handoff`, `/edit`, and `Ctrl+G` a deterministic host-aware external edit path:
+This gives `/edit` and `Ctrl+G` a deterministic host-aware external edit path:
 - if pi runs inside nvim `:terminal`, edits open in the host nvim
 - otherwise it falls back to local nvim
 

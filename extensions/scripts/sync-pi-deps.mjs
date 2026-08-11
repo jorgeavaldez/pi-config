@@ -78,7 +78,6 @@ const { piPackageJson: installedPiPackageJson } = getInstalledPiInfo();
 
 const pinnedVersions = {
   "@earendil-works/pi-coding-agent": stripVersion(installedPiPackageJson.version),
-  "@earendil-works/pi-agent-core": stripVersion(installedPiPackageJson.dependencies["@earendil-works/pi-agent-core"]),
   "@earendil-works/pi-ai": stripVersion(installedPiPackageJson.dependencies["@earendil-works/pi-ai"]),
   "@earendil-works/pi-tui": stripVersion(installedPiPackageJson.dependencies["@earendil-works/pi-tui"]),
   "typebox": stripVersion(installedPiPackageJson.dependencies.typebox),

@@ -447,10 +447,9 @@ If the desired `/tree` or continuation mechanics cannot be performed safely by t
 Preferred recovery order when the user has not required a specific session/tree:
 
 1. `/tree` when a suitable earlier point exists.
-2. `/handoff` when the task is a new workstream but prior summary is useful.
-3. `/compact` when the current objective is still correct and only context pressure is the issue.
-4. An approved fork from a finalized plan/session when the plan architecture is important and context is manageable.
-5. A fresh side pane/session with the plan path and concise context when old context is not useful, not approved for forking, overloaded, or would be harmful.
+2. `/compact` when the current objective is still correct and only context pressure is the issue.
+3. An approved fork from a finalized plan/session when the plan architecture is important and context is manageable.
+4. A fresh side pane/session with the plan path and concise context when the task is a new workstream, old context is not useful, forking is not approved, or the existing context is overloaded or harmful.
 
 For any of these, provide an explicit summary/context prompt and state whether the task is continuing the existing session/tree or starting fresh.
 Do not expect the agent to infer the preservation boundary.

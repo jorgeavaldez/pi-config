@@ -177,7 +177,6 @@ export default function (pi: ExtensionAPI) {
 	let intervalId: ReturnType<typeof setInterval> | null = null;
 	let requestRender: (() => void) | null = null;
 
-	let settingsManager: SettingsManager | null = null;
 	let settingsCwd: string | null = null;
 	let autoCompactEnabled = true;
 	let lastSettingsRefreshAt = 0;
@@ -206,19 +205,8 @@ export default function (pi: ExtensionAPI) {
 
 		const previous = autoCompactEnabled;
 		try {
-			if (!settingsManager || settingsCwd !== cwd) {
-				settingsManager = SettingsManager.create(cwd);
-				settingsCwd = cwd;
-			} else {
-				const maybeReload = (settingsManager as { reload?: () => void }).reload;
-				if (typeof maybeReload === "function") {
-					maybeReload.call(settingsManager);
-				} else {
-					settingsManager = SettingsManager.create(cwd);
-					settingsCwd = cwd;
-				}
-			}
-			autoCompactEnabled = settingsManager.getCompactionEnabled();
+			settingsCwd = cwd;
+			autoCompactEnabled = SettingsManager.create(cwd).getCompactionEnabled();
 		} catch {
 			// Keep previous value on errors
 		}
@@ -407,7 +395,9 @@ export default function (pi: ExtensionAPI) {
 
 					// Kimi Coding is subscription-backed despite using API-key authentication.
 					const usingSubscription = model
-						? model.provider === "kimi-coding" || ctx.modelRegistry.isUsingOAuth(model)
+						? model.provider === "kimi-coding" ||
+							(ctx.modelRegistry.isUsingOAuth(model) &&
+								ctx.modelRegistry.getProvider(model.provider)?.auth.oauth?.isSubscription === true)
 						: false;
 					if (totalCost || usingSubscription) {
 						const costStr = `$${totalCost.toFixed(3)}${usingSubscription ? " (sub)" : ""}`;
