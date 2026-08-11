@@ -1,383 +1,300 @@
 ---
 name: agent-prompt-drafting
-description: Draft explicit prompts for other AI agents. Use every time the user asks you to instruct, prompt, start, spawn, delegate to, queue work for, follow up with, or message another agent, especially with Herdr manager. Ensures planning-vs-implementation mode, approval gates, context boundaries, trigger conditions, and expected artifacts are explicit before sending.
+description: Draft explicit, context-bounded prompts for other AI agents. Use whenever instructing, spawning, delegating to, queueing work for, following up with, or messaging another agent, especially through Herdr. Requires clear mode, permissions, routing, approval gates, and task sizing so agents can finish without compaction.
 ---
 
 # Agent Prompt Drafting
 
 Use this skill every time you write instructions for another AI agent.
-This includes Herdr panes, Pi agents, Claude/Codex agents, review agents, planning agents, implementation agents, watcher-delivered follow-ups, and queued prompts.
+This includes Herdr panes, Pi agents, review agents, implementation agents, watcher-delivered follow-ups, and queued prompts.
 
-This skill is mandatory even when another skill also applies.
-For Herdr coordination, use this skill together with `herdr-manager`.
-Herdr manager maps panes/workspaces/triggers; this skill drafts the actual agent prompt.
+For Herdr coordination, use this skill with `herdr-manager`.
+Herdr manager owns routing and live pane safety.
+This skill owns task sizing and prompt wording.
 
-## Core rule
+## Primary goal: finish without compaction
 
-Never rely on implication.
-Agent prompts must explicitly say:
+Treat context-window pressure as a correctness risk.
+A prompt is not successful if it causes the recipient to compact, lose requirements, or stop early.
 
-- whether the agent is in planning, investigation, implementation, review, or bookkeeping mode;
-- whether file edits are allowed;
-- whether source-control mutation is allowed;
-- whether the agent must stop for approval before edits;
-- what context matters and what artifact/output is expected;
-- how much detail is required in the plan or report;
-- what exact workspace/revision/pane/session/tree continuation the task belongs to when known;
-- that the sender must clear any existing staged input in the target Pi pane before submitting the prompt;
-- for plan-based parallel work, what shared plan anchors the work and how this agent's seam fits sibling workstreams.
+Default to one bounded task packet that the agent can complete in one context window.
+Keep the task inline and self-contained, but do not reproduce context the agent can discover from the repository.
 
-If the user asks for planning, investigation, review, or a proposal, the prompt must say **planning only** and **do not modify files** unless the user explicitly authorized edits.
+A short prompt is not an underspecified prompt.
+State the outcome, relevant issues, constraints, and stop condition, then trust the agent to choose the mechanics.
 
-If the user says “that agent,” “same agent,” “continue from here,” “from this point in the session tree,” “use `/tree`,” or similar, treat that as a routing requirement, not just context to copy. The prompt must target the exact existing Pi session/tree or stop for clarification; do not replace session continuity by pasting context into a fresh session.
+## Task-sizing gate
 
-## Prompt drafting workflow
+Before drafting or sending a technical prompt, assess whether it is likely to fit comfortably in one context window.
 
-Before sending a prompt to another agent:
+Warning signs include:
 
-1. Identify the task mode:
-   - planning / plan revision;
-   - investigation / research;
-   - implementation;
-   - code review / quality audit;
-   - follow-up after completion;
-   - bookkeeping / vault update.
-2. Identify the target:
-   - workspace, pane, session, cwd, and revision when using Herdr;
-   - whether the task must continue an existing Pi session/tree, fork from a plan session with approval, or use a fresh session;
-   - repo path and PR/plan/doc references;
-   - current agent status if sending to an existing agent.
-3. If the work is plan-based parallel delegation, identify the shared plan anchor, sibling workstream map, expected seams, and final integration path before drafting child prompts.
-4. Decide whether approval is required before edits.
-   - Default for planning/revision prompts: approval required.
-   - Default for implementation prompts: edits allowed only for the named scope.
-5. Draft the prompt with explicit mode, allowed edits/scope, task, expected output, and stop conditions.
-6. Re-read the prompt before sending and check for verbs that accidentally authorize edits.
-7. Immediately before sending to an existing Pi pane, clear the target input box first. Never append a new prompt onto staged text already sitting in the input.
+- more than three independent issue clusters;
+- changes spanning several architectural layers or languages;
+- review, implementation, and exhaustive verification bundled together;
+- a long list of exact changes such as “change X to Y, rewrite Z, migrate A, and retest B”;
+- whole-diff audits plus fixes;
+- large behavior matrices or many test suites;
+- migrations, schemas, workflows, provider integrations, or failure recovery combined in one task;
+- an existing recipient already near or past 50% context usage.
 
-Do not send prompts with ambiguous verbs like “revise”, “fix”, “clean up”, “update”, “take into account”, or “incorporate” unless the prompt also explicitly says whether that means planning-only or code edits.
+When these signs appear, **do not draft or send the full prompt yet**.
+First propose a small batch sequence to Jorge and wait for approval.
 
-## Mode language
+Choose batches based on dependencies, for example:
 
-### Planning-only prompt language
+1. characterize behavior or add focused failing tests;
+2. implement one related correctness seam;
+3. implement the next independent seam;
+4. run focused integration verification;
+5. perform a final review in a fresh context.
 
-Use this whenever the user wants a plan, proposal, investigation, comparison, design revision, or approval gate.
+Tests-first is a suggestion, not a fixed rule.
+Use it when characterization reduces implementation risk.
+Combine tests with implementation when they are small and inseparable.
 
-Required language:
+The batching proposal should be short:
+
+```text
+This is likely to exceed one context window. Suggested batches:
+1. <bounded outcome>
+2. <bounded outcome>
+3. <bounded verification>
+
+Want me to send batch 1 first?
+```
+
+After approval, draft or send one batch at a time unless Jorge explicitly asks to queue multiple batches.
+If the task cannot be made safely concise without losing requirements, split it rather than expanding the prompt.
+
+## Do not prescribe broad-task procedure
+
+For broad objectives such as review, investigation, or planning, do not dictate an exhaustive step-by-step process.
+The receiving agent is responsible for choosing how to inspect, search, reason, and validate.
+
+For example, prefer:
+
+```text
+Review the current working-copy diff for correctness, focusing on dispatch recovery and outcome consistency.
+Report actionable findings with file references and a verdict.
+```
+
+Do not expand that into instructions to read every file, enumerate every helper, run a long command matrix, trace every branch, and produce multiple inventories unless Jorge specifically requests those artifacts.
+
+For precise implementation tasks, describe each issue and the required invariant.
+Avoid prescribing exact internal mechanics unless the mechanism itself is a user-approved requirement.
+
+## Minimal context rules
+
+Include only context the recipient cannot reliably infer:
+
+- the task and business outcome;
+- the exact workspace, cwd, revision, pane, and session/tree plan when relevant;
+- one plan, PR, ticket, or artifact anchor when useful;
+- the issue descriptions or decisions that must cross agent boundaries;
+- mode, edit permissions, source-control permissions, and approval gate;
+- the expected artifact or concise completion report.
+
+Keep business context to one to three short bullets.
+Default to roughly 150–350 words for a single task packet.
+Exceed that only when the exact issue list itself requires it and the task still fits one context.
+
+Omit by default:
+
+- review procedures and generic coding workflows;
+- exhaustive test/check command lists;
+- full prior-agent transcripts or chronological history;
+- repeated repository instructions already available to the agent;
+- detailed changed-surface inventories the agent can derive;
+- speculative edge cases unrelated to the named issue;
+- unrelated sibling work, even as negative scope;
+- repeated explanations of the same invariant;
+- mandatory report sections that do not affect the decision.
+
+Pass findings, not the investigation that produced them.
+Prefer exact file paths and a short issue description over copied review prose.
+
+## Mandatory prompt fields
+
+Every delegated prompt must still make these points explicit, usually in one line each:
+
+- **Target:** workspace/cwd/revision and session plan when relevant.
+- **Mode:** planning, investigation, review, implementation, or bookkeeping.
+- **Edits:** allowed scope, or “do not modify files.”
+- **Source control:** whether mutations are allowed.
+- **Task:** one bounded objective or approved batch.
+- **Output:** the artifact or concise report expected.
+- **Stop condition:** approval gate or concrete ambiguity that should stop work.
+
+If Jorge says “that agent,” “same agent,” “continue from here,” “use `/tree`,” or similar, target the exact session/tree.
+Do not substitute a fresh session with copied context.
+If Jorge explicitly requests `/new` or a fresh sibling, say that the new session is intentional.
+
+Before submitting to an existing Pi pane, confirm it is not working and clear any staged input.
+Never append a prompt to existing input.
+
+## Drafting workflow
+
+1. Resolve the target workspace, pane, cwd, revision, and session plan.
+2. Choose the mode and edit/source-control permissions.
+3. Apply the task-sizing gate.
+4. If batching is needed, propose batches and stop for approval.
+5. Draft only the current bounded task.
+6. Run a compression pass:
+   - remove procedural instructions the agent can choose itself;
+   - remove context available in the repo;
+   - remove duplicated constraints and report sections;
+   - replace copied history with direct issue descriptions;
+   - confirm the task can finish without compaction.
+7. Clear the target input and submit.
+
+## Mode wording
+
+### Planning
 
 ```text
 Mode: PLANNING ONLY.
-Do not modify files.
-Do not run source-control mutation commands.
-Do not implement the changes yet.
-Produce a full detailed plan first and stop for Jorge's approval before making edits.
+Do not modify files or source-control state.
+Produce a concise implementation plan covering the key decisions, likely files, focused validation, and real open questions.
+Stop for Jorge’s approval before implementation.
 ```
 
-For plan revisions, be even more explicit:
+Do not request a “full detailed plan” by default.
+The plan should be detailed enough to implement the bounded task, not an exhaustive architecture document.
 
-```text
-This is a plan revision, not implementation.
-Revise the plan in detail, but do not revise code, migrations, schemas, or source-control revisions yet.
-Stop after the revised plan.
-```
-
-Required plan detail checklist:
-
-- decisions and reasoning;
-- exact files that would change after approval;
-- exact data model/API/control-flow shape when applicable;
-- migration/revision strategy when applicable;
-- validation commands;
-- risks and open questions;
-- what is intentionally out of scope.
-
-### Investigation/research prompt language
-
-Use this for discovery tasks.
+### Investigation
 
 ```text
 Mode: INVESTIGATION ONLY.
-Do not modify files.
-Use web search where current provider/API documentation matters.
-Write durable findings in the final response or requested artifact.
-Include source links, repo file references, decisions, risks, and recommended next steps.
-```
-
-If web research is required, say so directly:
-
-```text
-You have web search access. Use websearch/webfetch for current external docs before making recommendations.
-Do not rely on memory for provider/API behavior.
-```
-
-### Implementation prompt language
-
-Use this only when edits are authorized.
-
-```text
-Mode: IMPLEMENTATION.
-Allowed scope is the workstream/area described below.
-Expected files/areas are orientation, not a rigid cage, unless Jorge explicitly requested a hard allowlist.
-Agents may touch nearby code/tests when that is the simplest correct design for the named seam.
-Stop if the work requires taking over sibling responsibilities, changing schema/webhooks/source-control/session plans without authorization, or if the session/tree target is not available.
-Do not push, commit, bookmark, merge, or mutate remote/source-control state unless explicitly asked.
-Report changed files, checks run, and remaining blockers.
-```
-
-Lead with the allowed scope, expected areas, and the stop condition:
-
-```text
-Allowed scope:
-- <workstream/seam/output this agent owns>
-
-Expected areas, as orientation:
-- <file or directory likely involved>
-- <tests likely involved>
-
-Stop condition:
-- Stop and report before leaving the scope, taking over sibling work, or changing the session/tree/workspace plan.
-```
-
-Use negative scoping sparingly.
-Only include “do not edit X” when X is an obvious adjacent risk already in the agent's context or an exclusion the user explicitly requested.
-Do not list speculative future phases merely to say they are out of scope.
-
-### Follow-up prompt language
-
-For follow-ups to an existing agent, first preserve mode and routing.
-Do not assume a completed planning agent should now implement.
-Do not turn “same agent” or “that agent” into a fresh session with copied context; target the existing session/tree or ask how to continue it.
-
-Good:
-
-```text
-Follow-up in PLANNING ONLY mode.
-Use the findings below to produce a revised detailed plan.
 Do not modify files or source-control state.
-Stop for approval after the revised plan.
+Answer <specific question> and report the evidence, conclusion, and remaining uncertainty concisely.
 ```
 
-Bad:
+Ask for a durable artifact only when another agent or future session genuinely needs it.
+
+### Review
 
 ```text
-Revise the schema split to include this feedback.
+Mode: REVIEW ONLY.
+Do not modify files or source-control state.
+Review <bounded scope> for <named concerns>.
+Report actionable findings with file references and a verdict.
 ```
 
-That is ambiguous and can be interpreted as edit authorization.
+Do not give the reviewer a review procedure.
+Do not combine a broad review with implementation in the same prompt.
+If fixes are likely, review first and send a separate implementation batch after findings are approved.
 
-## Plan-based parallel child prompts
-
-Use this pattern when splitting implementation across agents from a shared plan.
-Do not hand each agent a vague package name and a hard file cage.
-Give each agent an explicit seam and enough sibling context to avoid duplication.
-
-Required elements:
-
-- Plan anchor: exact plan path and relevant section(s) as the shared source of truth.
-- Context/session decision: fresh session by default; fork from a finalized plan/session only when Jorge asked or approved and the context is not overloaded.
-- Sibling map: each sibling's responsibility, this agent's responsibility, the seam/output this agent produces, the seam/input it expects, and who will integrate the results.
-- Scope boundaries: expected files/areas as orientation; nearby code/tests are allowed when they are the simplest correct design; stop before schema/webhook/source-control/session-plan changes or sibling ownership.
-- Business reason: why this work exists and what final user/product path consumes it.
-- Missing seam behavior: if a sibling seam is absent, leave a narrow integration note or stop/report instead of inventing temporary lifecycle behavior.
-- Code-quality constraints: smallest direct implementation; no speculative abstraction; no new public helper/API unless consumed by a sibling seam now; tests verify behavior, not helper taxonomy; if a small seam becomes a subsystem, stop and explain why.
-
-Reusable shape:
+### Implementation
 
 ```text
-You are implementing <workstream/seam> from <plan path>, especially <section>.
-Session plan: <fresh session with plan path and concise context | forked from finalized plan session X with Jorge's approval because context is manageable>.
-
-Sibling workstream map:
-- <sibling A>: owns <responsibility>; produces <seam/output>.
-- <sibling B>: owns <responsibility>; produces <seam/output>.
-- You: own <responsibility>; produce <seam/output>; expect <input/seam> from <sibling>.
-- Integration path: <serial integrator/workflow/test path that combines results>.
-
 Mode: IMPLEMENTATION.
-Allowed scope: <this agent's seam/workstream>.
-Expected areas, as orientation: <likely files/tests>.
-You may touch nearby code/tests when it is the simplest correct design for this seam.
-Do not duplicate sibling responsibilities.
-Stop before schema/webhook/source-control/session-plan changes or taking over sibling work.
-
-Business context:
-- <why this matters>
-- <what final path consumes it>
-
-Task:
-1. <specific seam work>
-2. <tests/validation>
-3. <integration note if a sibling seam is missing>
-
-Constraints:
-- Smallest direct implementation.
-- No speculative abstractions or public helper/API unless consumed by this seam or a sibling seam now.
-- Tests should verify behavior, not helper taxonomy.
-- If this grows into a subsystem, stop and explain why.
-
-Expected output:
-- Changed files and checks run.
-- Seam produced and expected sibling inputs.
-- Integration notes/blockers.
+Allowed scope: <one approved seam or batch>.
+Do not mutate source-control state or push unless explicitly authorized.
+Implement the required behavior and focused tests.
+Report changed files, checks run, and blockers concisely.
+Stop if the task expands beyond this seam or requires an unapproved schema/session/source-control change.
 ```
 
-## Prompt template
+Expected files may be listed as orientation, not as a rigid cage.
+Allow nearby code and tests when they are the simplest correct implementation of the named seam.
+
+### Bookkeeping
 
 ```text
-You are working in <cwd> on <task/PR/plan>.
-Target context:
-- Workspace/pane/session/tree: <ids and continuation point if relevant>
-- Session plan: <continue exact session/tree | fresh session allowed | ask before spawning>
-- Current revision/branch/bookmark: <revision if relevant>
-- Relevant docs/PRs/comments: <short list>
-- For plan-based parallel work: <plan anchor, sibling map, seam/output, expected inputs, integration path>
-
-Mode: <PLANNING ONLY | INVESTIGATION ONLY | IMPLEMENTATION | REVIEW | BOOKKEEPING>.
-<Explicit edit permissions with allowed scope/areas first, and source-control permissions.>
-<Explicit approval gate if any.>
-
-Business context:
-- <why this work exists>
-- <what correctness means for the product/user>
-
-Task:
-1. <specific instruction>
-2. <specific instruction>
-3. <specific instruction>
-
-Expected output:
-- <full detailed plan / changed files / findings / validation results>
-- <risks/open questions>
-- <stop condition>
-
-Constraints:
-- <source-control constraints>
-- <workspace constraints>
-- <scope boundaries>
+Mode: BOOKKEEPING.
+Allowed edits: <specific notes/task files>.
+Apply <specific update> and report the files changed.
+Do not alter code or source-control state.
 ```
 
-## Business context requirements
+## Technical issue prompts
 
-Include business context when the task involves architecture, schema, product behavior, data modeling, workflow orchestration, security, or cross-provider abstractions.
-
-Business context should answer:
-
-- Who or what uses this?
-- What decision will consume the output?
-- What failure mode are we avoiding?
-- What should be simple or future-proof?
-- What is not the goal right now?
-
-Example:
+Describe technical findings in this compact shape:
 
 ```text
-Business context:
-- Nebari opens remediation PRs for findings.
-- This series makes those PRs self-healing.
-- Webhooks capture provider check/status state, but a scheduled workflow later chooses only current actionable failures.
-- The schema must avoid stale/superseded check output so the feedback agent does not revise a PR from old CI data.
-- Keep the schema provider-neutral where possible; do not add GitHub-specific tables unless unavoidable.
+Issue: <what is wrong and where>.
+Impact: <why it matters>.
+Required invariant: <what must be true afterward>.
 ```
 
-## Approval gates
+Usually omit the proposed algorithm.
+Include it only when Jorge approved that design or interoperability requires that exact mechanism.
 
-Use explicit approval gates for:
+If several issues share one control-flow seam, they may form one batch.
+If they require independent designs or validation paths, split them.
 
-- plan revisions;
-- schema/data model decisions;
-- migrations;
-- source-control restructuring;
-- cross-provider abstractions;
-- broad refactors;
-- destructive cleanup;
-- ambiguous user intent.
+## Plan-based parallel work
 
-Required wording:
+Parallel prompts still need a shared plan anchor and seam ownership, but keep sibling context minimal:
 
 ```text
-Stop after the plan and wait for Jorge's approval before editing files or changing revisions.
+Plan: <path and section>.
+You own: <seam and output>.
+Sibling dependency: <only the input/output this task directly touches>.
+Integration owner: <pane or later batch>.
 ```
 
-If the user authorized implementation after approval, say:
+Do not include every sibling’s history or responsibilities.
+If a missing sibling seam blocks the task, tell the agent to stop and report rather than inventing a temporary architecture.
+
+## Follow-ups and watchers
+
+A queued prompt must be safe and understandable when delivered later.
+Begin with:
 
 ```text
-After approval, the next step will be implementation in a separate prompt.
-```
-
-## Source-control wording
-
-Be precise.
-
-For no source-control mutations:
-
-```text
-Do not run source-control mutation commands: no jj rebase/squash/split/edit/new/bookmark/commit/git push.
-Read-only jj inspection is allowed with `--ignore-working-copy` if needed.
-```
-
-For isolated jj mutation allowed:
-
-```text
-It is OK to use jj mutation commands in this isolated workspace only for the requested split/rebase.
-Do not push or create/update bookmarks.
-Do not touch other workspaces.
-Report the final stack shape.
-```
-
-Do not mix these two modes.
-
-## Queue/watch prompts
-
-When writing a prompt that will be delivered later by a watcher, the prompt itself must be safe if delivered at the trigger moment.
-
-Every queued prompt must begin with:
-
-```text
-Follow-up after your previous task is complete.
+Follow-up after the previous task completes.
 Mode: <mode>.
 ```
 
-If the follow-up should not start implementation, include:
+Include the bounded task, permissions, session plan, and stop condition in the queued prompt itself.
+Do not rely on watcher shell comments or manager memory.
+
+Do not queue a large second phase merely because the first phase is still running.
+Wait for the first result when it could change the next batch.
+
+## Source-control wording
+
+Default no-mutation wording:
 
 ```text
-Do not modify files yet.
-Produce the revised plan first and stop for approval.
+Do not run source-control mutation commands or push. Read-only inspection is allowed.
 ```
 
-Do not rely on the watcher trigger to convey intent.
-The delivered prompt must be self-contained.
+When isolated mutation is explicitly authorized, state the exact operation and workspace.
+Do not mix mutation permission with a contradictory prohibition.
 
 ## Anti-patterns
 
-Avoid these in agent prompts:
+Do not send prompts that:
 
-- “revise X” without saying planning-only or implementation;
-- “take this into account” without an expected artifact;
-- “clean up” without allowed files and validation;
-- “fix it” without scope and stop conditions;
-- “continue” without saying what context, session, and tree point to preserve;
-- mentioning unrelated projects or speculative future phases as negative constraints;
-- dumping long manager context instead of task-local facts;
-- source-control permissions that conflict with each other;
-- replacing same-session/tree continuity with a new session plus copied context;
-- delegating broad packages instead of explicit seams and integration outputs;
-- using rigid file allowlists for parallel work when scope boundaries would be safer;
-- watcher prompts that depend on shell comments or manager memory.
+- bundle review, fixes, exhaustive tests, and final audit;
+- prescribe a long review or investigation procedure;
+- paste the prior agent’s full output when a short issue list suffices;
+- ask for multiple inventories, matrices, retrospectives, and plans in one response;
+- contain every possible validation command “just in case”;
+- use “full detailed,” “comprehensive,” or “exhaustive” without a user-requested reason;
+- enumerate many independent technical changes without first offering batches;
+- give a high-context agent another broad task instead of starting fresh;
+- say “fix it,” “revise,” or “continue” without mode and edit permissions;
+- replace required same-session continuity with copied context;
+- introduce unrelated topics through negative constraints.
 
 ## Pre-send checklist
 
-Before sending, answer yes to all:
+Before sending, answer yes:
 
-- Is the target Pi input box confirmed clean, or will it be cleared immediately before submitting?
-- Is the mode explicit?
-- Are edit permissions explicit?
-- Is the approval gate explicit if this is planning/revision/design/schema work?
-- Is source-control permission explicit and non-contradictory?
-- Is the allowed edit scope stated before any negative constraints?
-- Are negative constraints limited to adjacent risks already in context?
-- Is the expected output detailed enough?
-- Is the business context included when needed?
-- For plan-based parallel work, is the plan anchor, sibling map, seam/output, expected inputs, and integration path explicit?
-- Is the prompt self-contained for the receiving agent?
-- If same-session/tree continuity or plan-session forking was requested/approved, does the prompt use that exact session/tree instead of a fresh session?
-- Would an agent reading only this prompt know whether to edit or stop?
+- Can this task reasonably finish in one context window without compaction?
+- If it is broad or highly technical, did I offer a batch plan first?
+- Is this prompt only for the current approved batch?
+- Did I state target, mode, edit permissions, source-control permissions, task, output, and stop condition?
+- Did I avoid dictating procedure for a broad review/investigation?
+- Did I pass concise findings instead of history and transcripts?
+- Did I remove context the agent can derive from the repo?
+- Is the business context short and decision-relevant?
+- Is the session/tree plan explicit?
+- Is the target agent idle with a clean input box?
+
+If the first answer is no, do not send the prompt.
+Split the task or start a fresh agent with a smaller batch.
