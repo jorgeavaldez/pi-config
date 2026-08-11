@@ -41,13 +41,12 @@ Warning signs include:
 When these signs appear, **do not draft or send the full prompt yet**.
 First propose a small batch sequence to Jorge and wait for approval.
 
+An implementation phase may contain at most two batches. Each batch must fit one session and produce an independently reviewable, mergeable change. If a third batch is needed, redesign the phase instead of extending the sequence.
+
 Choose batches based on dependencies, for example:
 
-1. characterize behavior or add focused failing tests;
-2. implement one related correctness seam;
-3. implement the next independent seam;
-4. run focused integration verification;
-5. perform a final review in a fresh context.
+1. implement one related correctness seam with focused tests;
+2. implement the next independent seam with focused tests.
 
 Tests-first is a suggestion, not a fixed rule.
 Use it when characterization reduces implementation risk.
@@ -56,10 +55,9 @@ Combine tests with implementation when they are small and inseparable.
 The batching proposal should be short:
 
 ```text
-This is likely to exceed one context window. Suggested batches:
-1. <bounded outcome>
-2. <bounded outcome>
-3. <bounded verification>
+This phase is too large. Suggested redesign:
+1. <bounded, mergeable outcome>
+2. <bounded, mergeable outcome>
 
 Want me to send batch 1 first?
 ```
@@ -192,8 +190,9 @@ Mode: IMPLEMENTATION.
 Allowed scope: <one approved seam or batch>.
 Do not mutate source-control state or push unless explicitly authorized.
 Implement the required behavior and focused tests.
+Fix required discoveries that fit this seam. Report evidenced systemic issues outside it with their impact, evidence, and recommended remediation.
 Report changed files, checks run, and blockers concisely.
-Stop if the task expands beyond this seam or requires an unapproved schema/session/source-control change.
+Stop if required work exceeds this seam, would leave an incomplete fix, would entrench the systemic issue, or requires an unapproved schema/session/source-control change.
 ```
 
 Expected files may be listed as orientation, not as a rigid cage.
@@ -288,6 +287,7 @@ Before sending, answer yes:
 - Can this task reasonably finish in one context window without compaction?
 - If it is broad or highly technical, did I offer a batch plan first?
 - Is this prompt only for the current approved batch?
+- Does its phase contain at most two implementation batches?
 - Did I state target, mode, edit permissions, source-control permissions, task, output, and stop condition?
 - Did I avoid dictating procedure for a broad review/investigation?
 - Did I pass concise findings instead of history and transcripts?

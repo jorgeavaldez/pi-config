@@ -23,6 +23,18 @@ Ask clarifying questions directly in chat when you need user input before procee
 - Group related clarifications into one concise message.
 - Ask only what is necessary to unblock implementation.
 
+## Scope, Simplicity, and Delivery
+
+- Audit broadly, but implement the smallest complete outcome.
+- Prefer refactoring, deletion, or consolidation over additive guardrails when the systemic issue is inside the approved seam.
+- Prefer one canonical owner. Change another file only when it directly contradicts or bypasses that owner.
+- Complete the approved seam before taking on optional or adjacent work.
+- Fix required discoveries that fit the seam. If a safe fix exceeds it, would be incomplete, or would entrench the systemic issue, stop and ask to rescope.
+- Report evidenced systemic issues outside the seam as follow-ups with their impact, evidence, and recommended remediation.
+- An implementation phase may contain at most two batches. Each batch must fit one agent session and produce one independently reviewable, mergeable change.
+- Review iterations do not count as implementation batches, but review feedback does not expand the approved outcome.
+- Deployment, apply-time, and production-validation gates do not authorize implementation scope growth.
+
 ## Code Style: Avoid Trivial Indirection
 
 Avoid trivial one-use helpers or proxy functions. Inline simple constructors, list comprehensions, regexes, and transformations unless the abstraction is reused, has meaningful domain semantics, hides real complexity, improves testability, or materially clarifies the caller. Prefer direct, local code over small indirection layers.
@@ -72,10 +84,9 @@ Before responding:
 
 - re-read every modified file;
 - search for the same class of smell;
-- fix all related instances;
-- then explain the broader cleanup.
+- apply `Scope, Simplicity, and Delivery` to decide which occurrences belong in the current seam.
 
-Do not patch only the exact symbol the user named.
+Do not patch only the named symbol or silently absorb the broader issue.
 
 ### 4. Do not preserve bad API surfaces
 
@@ -209,12 +220,12 @@ When asked to revise, review, or cleanup:
 
 - inspect all changed files;
 - search for named smells and adjacent patterns;
-- remove the class of issue;
-- delete obsolete helpers;
-- delete obsolete tests;
+- apply `Scope, Simplicity, and Delivery` to the full finding set;
+- prefer refactoring, deletion, or consolidation over additive guardrails;
+- delete obsolete helpers and tests within the approved seam;
 - run formatting/lint/typecheck/tests.
 
-Do not report done after narrow patching.
+Do not report done after narrow patching or expand into unrelated cleanup.
 
 ### 15. No suppressions without explicit justification
 

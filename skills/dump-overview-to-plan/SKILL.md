@@ -105,8 +105,10 @@ Include:
 - relevant codebase file references using relative paths when possible
 - key findings, observations, decisions, and implementation details that save the next engineer time
 - a progress checklist mapped to phases and deliverables
-- phased execution plan with, for each phase:
-  - goal and description
+- locked behavior decisions, validation, rollout gates, and integration order
+- phased execution plan with a goal and at most two implementation batches per phase
+- for each batch:
+  - one-session, independently reviewable and mergeable outcome
   - files touched or created
   - approach and key details
   - acceptance criteria
@@ -118,7 +120,8 @@ Include:
 - Prefer path and wikilinks/backlinks over frontmatter metadata.
 - Preserve work/personal boundaries.
 - Remove material ambiguity, but do not chase perfection.
-- Document unresolved non-blockers briefly in the relevant section.
+- Redesign any phase that needs more than two implementation batches.
+- Document systemic follow-ups with their impact, evidence, and recommended remediation.
 - Keep the plan concise, integrated, and useful.
 - Avoid duplication, implementation journals, append-only discovery dumps, and giant “changes from above” sections.
 - Prefer blocker-level and high-risk information over low-value polish.

@@ -1,14 +1,10 @@
 ---
-description: Implement Phase(s) from a plan file
-argument-hint: "<plan-file> <phase(s)>"
+description: Implement one approved batch from a plan file
+argument-hint: "<plan-file> <phase-and-batch>"
 ---
-read through @$1 very carefully.
-you are going to implement Phase(s) $2 of the plan.
-you can assume that ANY and ALL previous phases of the plan have been implemented, if $2 is midway through the plan file.
-try and stick to the plan as much as possible.
-it contains context and investigation into the existing code and any necessary context.
-you are free to make improvements, revise, and adapt any sample code as necessary. make sure you are hoisting imports to the top level, and NEVER using the Any type, nor suppressing linter or typechecking errors unless absolutely necessary.
-you should investigate anything that is not clear using the file references in the existing code or by finding them yourself. you may search the web. use available read-only tools directly and batch independent lookups when supported.
-present me with your high level implementation plan overview before you begin just to clarify what you are going to do.
-if you have any clarifying questions, comments, concerns, STOP and let me address them for you before you continue.
-think very hard.
+read @$1 carefully and implement only $2.
+verify its dependencies instead of assuming earlier work is complete.
+follow the plan's locked behavior and scope decisions.
+investigate implementation mechanics as needed, but stop for behavior-changing ambiguity or required work outside the approved seam.
+complete the seam with focused tests. report optional or adjacent work as follow-up instead of implementing it.
+do not use Any or suppress lint/type errors unless absolutely necessary.

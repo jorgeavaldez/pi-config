@@ -71,7 +71,8 @@ Analyze every comment in the active session. Read its feedback file, inspect the
 - **Is it already addressed?** Sometimes code has changed since the comment was made
 
 Classify each comment as:
-- ✅ **INCLUDE**: Valid and should be addressed
+- ✅ **CURRENT**: Valid and required for this PR to be correct
+- ➡️ **FOLLOW-UP**: Valid, but not required for this PR
 - ⚠️ **QUESTIONABLE**: Might not be valid or appropriate (explain why)
 - ❌ **EXCLUDE**: Incorrect or not applicable (explain why)
 
@@ -79,7 +80,7 @@ Use available read/search tools directly, batching independent read-only lookups
 
 ### 1.4 Batch Comments by Semantic Similarity
 
-Group **INCLUDE** comments into batches based on semantic similarity. Consider:
+Group **CURRENT** comments into batches based on semantic similarity. Consider:
 
 - Comments about the same type of issue (e.g., error handling, naming, performance)
 - Comments in related files or the same module/feature area
@@ -97,7 +98,8 @@ For each batch, note:
 Keep the triage summary in the active chat/session instead of writing progress or status files to disk. Include:
 
 - **Triage Results**: Your analysis of each comment's validity
-- **Batches**: List each batch with its comments and grouping reasoning (only INCLUDE comments)
+- **Batches**: List each batch with its comments and grouping reasoning (only CURRENT comments)
+- **Follow-ups**: Valid comments that should not expand this PR; include impact, evidence, and recommended remediation for systemic issues
 - **Excluded**: Comments you recommend excluding with reasoning
 - **Status**: Which batch is currently being discussed or worked
 - **Notes**: Observations, decisions, anything relevant
@@ -112,13 +114,16 @@ Keep the triage summary in the active chat/session instead of writing progress o
 > - Batch 1 - [Name]: [brief description] (N comments)
 > - Batch 2 - [Name]: [brief description] (N comments)
 > 
+> **Follow-ups (not part of this PR):**
+> - [file:line] - [issue] — [why it can wait]
+>
 > **Questionable (need your input):**
 > - [file:line] - [issue] — [your concern]
 > 
 > **Recommending to skip:**
 > - [file:line] - [issue] — [reason]
 >
-> Let me know if you want to exclude anything, include something I flagged, or adjust the batches.
+> Let me know if you want to exclude anything, promote a follow-up, or adjust the batches.
 
 **WAIT for user response.** Do not proceed until they approve or provide feedback.
 
@@ -126,7 +131,7 @@ Keep the triage summary in the active chat/session instead of writing progress o
 
 Process user feedback:
 - **Exclude comments**: Remove from batches, add to Excluded section with user's reasoning
-- **Include comments**: Add to appropriate batch (or create new batch), move from Excluded/Questionable
+- **Promote comments**: Add an explicitly approved FOLLOW-UP or QUESTIONABLE comment to an appropriate current batch
 - **Adjust batches**: Merge, split, or reorder as requested
 - **Approve as-is**: Proceed to work
 
@@ -158,7 +163,7 @@ Investigate each comment with the available read/search tools, then make code ch
    - For backend code: `cd backend && make lint`
    - For frontend code: `cd frontend && ENV=local bun run lint`
 
-**Important**: The comment files contain specific instructions. Follow them, especially the verification steps.
+**Important**: The comment files contain specific instructions. Follow them, especially the verification steps. If a CURRENT comment proves to require a new outcome or redesign, stop and ask to rescope instead of expanding the PR.
 
 ### 2.3 Resolve Comments on GitHub
 
@@ -238,16 +243,17 @@ rm {comment-id}-review-feedback.md
 
 When all batches are done:
 
-1. Inform the user: "All PR review comments have been addressed locally."
-2. State clearly whether changes are only local or already visible on the PR
-3. Do **not** ask to update the PR branch, push, commit, move bookmarks, or otherwise mutate source control
-4. Optionally summarize what was done across all batches
+1. Inform the user: "All current-scope PR review comments have been addressed locally."
+2. List any FOLLOW-UP comments separately
+3. State clearly whether changes are only local or already visible on the PR
+4. Do **not** ask to update the PR branch, push, commit, move bookmarks, or otherwise mutate source control
+5. Optionally summarize what was done across all batches
 
 ---
 
 ## Key Reminders
 
-- **Complete comment investigation before editing** - batch independent read-only lookups when supported
+- **Complete comment investigation before editing** - classify CURRENT work separately from FOLLOW-UP work
 - **Make code edits sequentially** - actual edits should be done one at a time to avoid conflicts
 - **Always WAIT for user response between batches** - never auto-proceed
 - **Never mutate source control from this skill and never offer to do so** - no commits, bookmark moves, branch moves, pushes, rebases, amends, or prompts asking to update the PR branch

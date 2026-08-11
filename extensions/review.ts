@@ -71,20 +71,27 @@ Use available read, search, and web tools directly. Batch independent read-only 
 
 ## Priority Levels
 
-- [P0] - Blocking. Drop everything to fix.
-- [P1] - Urgent. Address in next cycle.
-- [P2] - Normal. Fix eventually.
-- [P3] - Low. Nice to have.
+Priority describes severity, not whether a finding belongs in this change.
+
+- [P0] - Critical
+- [P1] - High
+- [P2] - Normal
+- [P3] - Low
+
+## Disposition
+
+- [CURRENT] - Must be addressed for the approved change to be correct.
+- [FOLLOW-UP] - Valid improvement, but not required for the approved change. For systemic issues, include impact, evidence, and recommended remediation.
 
 ## Output format
 
 Provide your findings in a clear, structured format:
-1. List each finding with its priority tag, file location, and explanation.
+1. List each finding with its priority, disposition, file location, and explanation.
 2. Keep line references as short as possible (avoid ranges over 5-10 lines).
-3. At the end, provide an overall verdict: "correct" (no blocking issues) or "needs attention" (has blocking issues).
+3. At the end, provide an overall verdict: "correct" (no CURRENT findings) or "needs attention" (has CURRENT findings).
 4. Ignore trivial style issues unless they obscure meaning or violate documented standards.
 
-Output all findings the author would fix if they knew about them. If there are no qualifying findings, explicitly state the code looks good. Don't stop at the first finding - list every qualifying issue.`;
+Output all qualifying findings, but do not turn FOLLOW-UP findings into merge blockers. If there are no qualifying findings, explicitly state the code looks good. Don't stop at the first finding - list every qualifying issue.`;
 
 const REVIEW_SUMMARY_PROMPT = `We are switching to a coding session to continue working on the code. 
 Create a structured summary of this review branch for context when returning later.
@@ -92,9 +99,9 @@ Create a structured summary of this review branch for context when returning lat
 You MUST summarize the code review that was performed in this branch so that the user can act on it.
 
 1. What was reviewed (files, changes, scope)
-2. Key findings and their priority levels (P0-P3)
+2. Key findings with priority (P0-P3) and disposition (CURRENT or FOLLOW-UP)
 3. The overall verdict (correct vs needs attention)
-4. Any action items or recommendations
+4. Current action items and follow-ups, kept separate
 
 YOU MUST append a message with this EXACT format at the end of your summary:
 
@@ -107,7 +114,7 @@ YOU MUST append a message with this EXACT format at the end of your summary:
 
 ## Code Review Findings
 
-[P0] Short Title
+[P0][CURRENT] Short Title
 
 File: path/to/file.ext:line_number
 
@@ -334,7 +341,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
 				}
 
 				if (!ctx.ui.getEditorText().trim()) {
-					ctx.ui.setEditorText("Act on the code review");
+					ctx.ui.setEditorText("Review the code review findings");
 				}
 
 				ctx.ui.notify("Review complete! Returned to original position.", "info");
