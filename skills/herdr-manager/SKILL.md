@@ -39,15 +39,21 @@ task -> workspace -> tab -> pane -> session/tree -> cwd -> revision
 Use `herdr pane read <pane> --source recent-unwrapped --lines 80` only when needed to confirm the workstream, session, or context usage.
 For repository work, verify the target cwd and revision with read-only `jj` commands.
 
+Herdr state is concurrent and user-controlled; expect workspaces, tabs, panes, focus, and agent status to change between commands.
+Immediately before each action, reread and actually verify the target's current workspace, tab, pane, session, cwd, revision, and status as applicable.
+Do not batch an inventory command with a hard-coded action or treat a successful listing as verification without checking its result.
+If the target changed or disappeared, stop and resolve the live mapping again.
+
 Never rely on remembered pane IDs, tab numbers, status, cwd, or revisions.
 If multiple live targets fit the user's reference, name them and ask.
 
 ## Routing rules
 
-- Keep work in the workspace that owns the task.
+- Treat a workspace as task-owned, not merely repository-owned. Never route a new unrelated task into an existing workspace because it uses the same repository or has an idle agent.
+- Reuse a workspace only for the same workstream or when the user explicitly requests that exact reuse; otherwise obtain permission for a fresh isolated workspace.
 - Do not create Herdr or jj workspaces, worktrees, branches, bookmarks, or clones without explicit permission.
 - Do not start multiple agents editing the same filesystem workspace unless explicitly asked.
-- Split review, investigation, or follow-up panes beside the pane that owns the work.
+- Route review work to a clean tab in the workspace that owns the work. Split investigation or follow-up panes beside the pane that owns the work.
 - Keep bookkeeping in the appropriate vault/bookkeeping context.
 - Never send a prompt to a `working` agent unless the user explicitly asks to interrupt.
 - Confirm the target is idle and clear staged input before sending; never append to existing input.
@@ -72,11 +78,12 @@ Avoid assigning substantial new work to a session above 50% context. Above 70%, 
 
 Before delegating:
 
-1. Confirm the task owner, plan or PR anchor, workspace, pane, session plan, cwd, and revision.
-2. Confirm any requested workspace creation or source-control operation is authorized.
-3. For parallel work, confirm the seams are independent and identify the integration owner and order.
-4. Load `agent-prompt-drafting` and give it the routing facts.
-5. Confirm the target is idle with a clean input box, then send the prompt.
+1. Confirm the user authorized dispatch now. Future intent, prioritization, or discussion of what to delegate next is not immediate dispatch authorization.
+2. Confirm the task owner, plan or PR anchor, task-owned workspace, pane, session plan, cwd, and revision.
+3. Confirm any requested workspace creation, reuse, or source-control operation is authorized.
+4. For parallel work, confirm the seams are independent and identify the integration owner and order.
+5. Load `agent-prompt-drafting` and give it the routing facts.
+6. Revalidate the live target, confirm it is idle with a clean input box, then send the prompt.
 
 For plan-based parallel work, pass only the shared plan anchor, sibling seam map, this agent's owned seam, required inputs, and integration owner. Do not duplicate prompt policy or sibling history here.
 
@@ -99,7 +106,7 @@ After queueing, report the target, trigger, watcher, dependency, and session pla
 
 ## Review and integration routing
 
-Run review and code-quality work in a clean side pane in the implementation workspace. If implementation is still running, queue review after that pane reaches `done`.
+Run review and code-quality work in a clean tab in the implementation workspace. If implementation is still running, queue review after the implementation pane reaches `done`.
 
 After parallel implementation, use one serial reconciliation review when the seams share interfaces or design. Use parallel reviewers only for genuinely independent surfaces.
 

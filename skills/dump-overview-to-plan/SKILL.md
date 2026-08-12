@@ -121,6 +121,7 @@ Include:
 - Preserve work/personal boundaries.
 - Remove material ambiguity, but do not chase perfection.
 - Redesign any phase that needs more than two implementation batches.
+- Verify batches against actual delivery boundaries rather than ticket, phase, or canonical-service labels. Treat independently mergeable caller migrations as separate batch candidates, and record unavailable validation environments as gates rather than setup scope.
 - Document systemic follow-ups with their impact, evidence, and recommended remediation.
 - Keep the plan concise, integrated, and useful.
 - Avoid duplication, implementation journals, append-only discovery dumps, and giant “changes from above” sections.

@@ -43,6 +43,8 @@ First propose a small batch sequence to Jorge and wait for approval.
 
 An implementation phase may contain at most two batches. Each batch must fit one session and produce an independently reviewable, mergeable change. If a third batch is needed, redesign the phase instead of extending the sequence.
 
+A ticket, approved plan, named batch, or shared canonical service is not proof that the work fits one session. Size the actual delivery boundaries: treat independently mergeable caller migrations as separate batch candidates even when they share a contract, and treat an unavailable validation environment as a gate rather than permission to add setup work.
+
 Choose batches based on dependencies, for example:
 
 1. implement one related correctness seam with focused tests;
@@ -65,22 +67,29 @@ Want me to send batch 1 first?
 After approval, draft or send one batch at a time unless Jorge explicitly asks to queue multiple batches.
 If the task cannot be made safely concise without losing requirements, split it rather than expanding the prompt.
 
-## Do not prescribe broad-task procedure
+## Describe outcomes, not procedures or file inventories
 
-For broad objectives such as review, investigation, or planning, do not dictate an exhaustive step-by-step process.
-The receiving agent is responsible for choosing how to inspect, search, reason, and validate.
+For broad objectives such as review, investigation, planning, or copy revision, state the intended outcome and semantic boundary, then trust the receiving agent to inspect the actual state and choose the smallest correct file surface, procedure, and validation.
+
+When Jorge asks to delegate a ticket or request to a task manager, planner, or investigator, the receiving agent owns investigation of the current state, reconciliation of source material, solution selection, and task decomposition. The coordinator owns routing, permissions, source anchors, the requested outcome, and constraints Jorge actually approved. Read only enough to route and bound the delegation safely; do not pre-investigate the code, pre-solve the task, or turn implementation suggestions from Jira, comments, or prior notes into hard prompt requirements.
+
+Behavioral acceptance criteria may be passed as requirements. Treat a technical mechanism as locked only when Jorge explicitly approved it or an approved plan or external contract requires it. Otherwise pass the source and let the receiving agent evaluate the mechanism, identify the smallest missing delta, and surface material ambiguity for approval.
+
+Do not broaden a request merely because adjacent artifacts are technically related, externally visible, or present in the same diff. Conversely, do not recover from ambiguity by replacing the outcome with an exhaustive filename allowlist or exclusion catalog. Exact paths are appropriate when Jorge named them, an approved plan or finding anchors them, or operational or security isolation requires a hard boundary; otherwise use paths only as orientation.
+
+If two reasonable interpretations would materially change the outcome, ask Jorge rather than choosing the broader or more rigid interpretation.
 
 For example, prefer:
 
 ```text
-Review the current working-copy diff for correctness, focusing on dispatch recovery and outcome consistency.
+Review the current working-copy change for correctness, focusing on dispatch recovery and outcome consistency.
 Report actionable findings with file references and a verdict.
 ```
 
 Do not expand that into instructions to read every file, enumerate every helper, run a long command matrix, trace every branch, and produce multiple inventories unless Jorge specifically requests those artifacts.
 
 For precise implementation tasks, describe each issue and the required invariant.
-Avoid prescribing exact internal mechanics unless the mechanism itself is a user-approved requirement.
+Avoid prescribing exact files or internal mechanics unless that boundary or mechanism is itself an approved requirement.
 
 ## Minimal context rules
 
@@ -110,7 +119,7 @@ Omit by default:
 - mandatory report sections that do not affect the decision.
 
 Pass findings, not the investigation that produced them.
-Prefer exact file paths and a short issue description over copied review prose.
+When handing off a specific finding, include its existing file reference and a short issue description instead of copied review prose; do not turn those references into a broader file prescription.
 
 ## Mandatory prompt fields
 
@@ -118,7 +127,7 @@ Every delegated prompt must still make these points explicit, usually in one lin
 
 - **Target:** workspace/cwd/revision and session plan when relevant.
 - **Mode:** planning, investigation, review, implementation, or bookkeeping.
-- **Edits:** allowed scope, or “do not modify files.”
+- **Edits:** the semantic edit boundary, or “do not modify files”; use exact paths only when the boundary genuinely requires them.
 - **Source control:** whether mutations are allowed.
 - **Task:** one bounded objective or approved batch.
 - **Output:** the artifact or concise report expected.
@@ -134,7 +143,7 @@ Never append a prompt to existing input.
 ## Drafting workflow
 
 1. Resolve the target workspace, pane, cwd, revision, and session plan.
-2. Choose the mode and edit/source-control permissions.
+2. Choose the mode, intended outcome, semantic edit boundary, and source-control permissions without substituting a file inventory for the objective.
 3. Apply the task-sizing gate.
 4. If batching is needed, propose batches and stop for approval.
 5. Draft only the current bounded task.
@@ -187,7 +196,7 @@ If fixes are likely, review first and send a separate implementation batch after
 
 ```text
 Mode: IMPLEMENTATION.
-Allowed scope: <one approved seam or batch>.
+Approved outcome and seam: <one bounded result or batch>.
 Do not mutate source-control state or push unless explicitly authorized.
 Implement the required behavior and focused tests.
 Fix required discoveries that fit this seam. Report evidenced systemic issues outside it with their impact, evidence, and recommended remediation.
@@ -196,7 +205,7 @@ Stop if required work exceeds this seam, would leave an incomplete fix, would en
 ```
 
 Expected files may be listed as orientation, not as a rigid cage.
-Allow nearby code and tests when they are the simplest correct implementation of the named seam.
+Trust the agent to choose the smallest correct surface for the approved outcome, including nearby code and tests when required.
 
 ### Bookkeeping
 
@@ -278,7 +287,8 @@ Do not send prompts that:
 - give a high-context agent another broad task instead of starting fresh;
 - say “fix it,” “revise,” or “continue” without mode and edit permissions;
 - replace required same-session continuity with copied context;
-- introduce unrelated topics through negative constraints.
+- introduce unrelated topics through negative constraints;
+- replace a clear outcome with an exhaustive filename allowlist or exclusion catalog.
 
 ## Pre-send checklist
 
@@ -289,6 +299,10 @@ Before sending, answer yes:
 - Is this prompt only for the current approved batch?
 - Does its phase contain at most two implementation batches?
 - Did I state target, mode, edit permissions, source-control permissions, task, output, and stop condition?
+- Does the prompt express the intended outcome and semantic boundary clearly enough for the agent to choose the right files?
+- For a task-manager, planning, or investigation delegation, did I leave current-state investigation, solution selection, and decomposition to the receiving agent?
+- Is every prescribed technical mechanism explicitly approved by Jorge or required by an approved plan or external contract, rather than inferred from source material?
+- Are exact paths present only because Jorge, an approved plan/finding, or a real isolation boundary requires them?
 - Did I avoid dictating procedure for a broad review/investigation?
 - Did I pass concise findings instead of history and transcripts?
 - Did I remove context the agent can derive from the repo?

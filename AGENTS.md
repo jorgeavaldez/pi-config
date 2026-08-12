@@ -28,7 +28,8 @@ Ask clarifying questions directly in chat when you need user input before procee
 - Audit broadly, but implement the smallest complete outcome.
 - Start from the requested outcome and the actual current state. Identify the smallest missing delta before proposing or doing work, regardless of the level of abstraction or form of the request.
 - Treat existing compatible capabilities as context or dependencies, not new work. Track only missing adaptation or evidence required to complete the requested outcome.
-- Organize analysis, recommendations, and execution around real outcomes, not categories of activity. By default, discovery, setup, compatibility checks, implementation, documentation, testing, validation, review, approval, and release readiness belong to the outcome they complete.
+- Organize analysis, recommendations, and execution around real outcomes, not categories of activity. Discovery, setup, compatibility checks, implementation, documentation, testing, validation, review, approval, and release readiness support the requested outcome; they are not separate scope or authorization to add persistent artifacts.
+- Do not invent validation. Every check must correspond to a concrete, authoritative requirement or demonstrated failure. Review human-facing prose editorially rather than converting wording into string assertions. Do not add validators, workflows, scripts, or other maintenance machinery merely to claim an outcome was validated.
 - Add structure or split responsibility only when it represents a distinct required outcome or an unavoidable boundary such as separate ownership, a real handoff, or an independently blocking external dependency or gate.
 - Minimize the number of outcomes and boundaries. Do not add process merely for visibility, symmetry, or an appearance of completeness.
 - Prefer refactoring, deletion, or consolidation over additive guardrails when the systemic issue is inside the approved seam.
@@ -163,7 +164,7 @@ Do not keep a helper public because a test imports it.
 
 Tests should exercise real public behavior. If a helper only exists for tests, delete the helper and rewrite the tests.
 
-When API shape changes, update tests to the better API instead of adding compatibility wrappers.
+When API shape changes, update tests to the better API instead of adding compatibility wrappers. Replace only coverage tied to the obsolete contract; preserve unrelated behavior and unaffected user-visible branches.
 
 ### 9. No speculative architecture
 
