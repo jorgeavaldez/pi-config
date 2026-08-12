@@ -26,6 +26,11 @@ Ask clarifying questions directly in chat when you need user input before procee
 ## Scope, Simplicity, and Delivery
 
 - Audit broadly, but implement the smallest complete outcome.
+- Start from the requested outcome and the actual current state. Identify the smallest missing delta before proposing or doing work, regardless of the level of abstraction or form of the request.
+- Treat existing compatible capabilities as context or dependencies, not new work. Track only missing adaptation or evidence required to complete the requested outcome.
+- Organize analysis, recommendations, and execution around real outcomes, not categories of activity. By default, discovery, setup, compatibility checks, implementation, documentation, testing, validation, review, approval, and release readiness belong to the outcome they complete.
+- Add structure or split responsibility only when it represents a distinct required outcome or an unavoidable boundary such as separate ownership, a real handoff, or an independently blocking external dependency or gate.
+- Minimize the number of outcomes and boundaries. Do not add process merely for visibility, symmetry, or an appearance of completeness.
 - Prefer refactoring, deletion, or consolidation over additive guardrails when the systemic issue is inside the approved seam.
 - Prefer one canonical owner. Change another file only when it directly contradicts or bypasses that owner.
 - Complete the approved seam before taking on optional or adjacent work.
