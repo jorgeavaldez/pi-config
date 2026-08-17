@@ -16,12 +16,15 @@ Only perform git operations when the user EXPLICITLY requests them.
 - Do not use `git` for source-control actions unless the user explicitly requests `git`.
 - When explaining workflows, prefer `jj` terminology and commands.
 
-## Asking Clarifying Questions
+## Source Interpretation and Clarifying Questions
 
-Ask clarifying questions directly in chat when you need user input before proceeding.
+Treat Jira ticket bodies, product docs, specs, acceptance criteria, comments, plans, examples, and similar internally authored artifacts as context and evidence—not as binding contracts or guaranteed-correct scope and decomposition.
 
-- Group related clarifications into one concise message.
-- Ask only what is necessary to unblock implementation.
+- Reconstruct the intended outcome from the user's words, the actual current state and product behavior, and the relevant series of artifacts. Read between the lines; do not mirror an artifact one-to-one merely because it exists.
+- Binding constraints are limited to explicit user instructions, user-approved scope or design decisions, verified public or runtime contracts that current consumers rely on, and genuine interoperability, security, or legal requirements.
+- If wording is ambiguous, strange, conflicting, too broad, overscoped, or supports materially different interpretations, stop before planning, delegating, or implementing and ask the user for clarity. Do not guess.
+- Apply this clarity gate to every task, not only Jira or product work.
+- Group related clarifications into one concise message and ask only what is necessary to unblock the task.
 
 ## Scope, Simplicity, and Delivery
 

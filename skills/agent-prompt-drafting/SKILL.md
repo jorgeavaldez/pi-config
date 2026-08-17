@@ -71,9 +71,11 @@ If the task cannot be made safely concise without losing requirements, split it 
 
 For broad objectives such as review, investigation, planning, or copy revision, state the intended outcome and semantic boundary, then trust the receiving agent to inspect the actual state and choose the smallest correct file surface, procedure, and validation.
 
-When Jorge asks to delegate a ticket or request to a task manager, planner, or investigator, the receiving agent owns investigation of the current state, reconciliation of source material, solution selection, and task decomposition. The coordinator owns routing, permissions, source anchors, the requested outcome, and constraints Jorge actually approved. Read only enough to route and bound the delegation safely; do not pre-investigate the code, pre-solve the task, or turn implementation suggestions from Jira, comments, or prior notes into hard prompt requirements.
+When Jorge asks to delegate a ticket or request to a task manager, planner, or investigator, the receiving agent owns investigation of the current state, reconciliation of source material, solution selection, and task decomposition. The coordinator owns routing, permissions, source anchors, the requested outcome, and constraints Jorge actually approved. Read only enough to route and bound the delegation safely; do not pre-investigate the code or pre-solve the task.
 
-Behavioral acceptance criteria may be passed as requirements. Treat a technical mechanism as locked only when Jorge explicitly approved it or an approved plan or external contract requires it. Otherwise pass the source and let the receiving agent evaluate the mechanism, identify the smallest missing delta, and surface material ambiguity for approval.
+Treat Jira ticket bodies, product docs, specs, acceptance criteria, comments, plans, examples, and similar internally authored artifacts as contextual evidence unless Jorge explicitly adopted a specific scope or design decision. Do not preserve their wording, decomposition, or proposed mechanisms one-to-one merely because they are documented. A delegated prompt must communicate the real user outcome and leave the receiving agent responsible for reconciling related sources with current product behavior.
+
+Pass behavioral acceptance criteria or technical mechanisms as binding only when Jorge explicitly approved them, a verified public or runtime contract currently relies on them, or a genuine interoperability, security, or legal requirement demands them. If source wording is ambiguous, strange, conflicting, too broad, overscoped, or supports materially different outcomes, ask Jorge before drafting or dispatching the prompt rather than making the receiving agent guess.
 
 Do not broaden a request merely because adjacent artifacts are technically related, externally visible, or present in the same diff. Conversely, do not recover from ambiguity by replacing the outcome with an exhaustive filename allowlist or exclusion catalog. Exact paths are appropriate when Jorge named them, an approved plan or finding anchors them, or operational or security isolation requires a hard boundary; otherwise use paths only as orientation.
 
@@ -143,7 +145,7 @@ Never append a prompt to existing input.
 ## Drafting workflow
 
 1. Resolve the target workspace, pane, cwd, revision, and session plan.
-2. Choose the mode, intended outcome, semantic edit boundary, and source-control permissions without substituting a file inventory for the objective.
+2. Choose the mode, intended outcome, semantic edit boundary, and source-control permissions without substituting a file inventory for the objective. Classify source artifacts as contextual or explicitly binding, and stop for clarity when their meaning or scope is materially ambiguous.
 3. Apply the task-sizing gate.
 4. If batching is needed, propose batches and stop for approval.
 5. Draft only the current bounded task.
@@ -299,9 +301,10 @@ Before sending, answer yes:
 - Is this prompt only for the current approved batch?
 - Does its phase contain at most two implementation batches?
 - Did I state target, mode, edit permissions, source-control permissions, task, output, and stop condition?
-- Does the prompt express the intended outcome and semantic boundary clearly enough for the agent to choose the right files?
-- For a task-manager, planning, or investigation delegation, did I leave current-state investigation, solution selection, and decomposition to the receiving agent?
-- Is every prescribed technical mechanism explicitly approved by Jorge or required by an approved plan or external contract, rather than inferred from source material?
+- Does the prompt express the actual user outcome and semantic boundary rather than copying a ticket or document's wording and decomposition?
+- For a task-manager, planning, or investigation delegation, did I leave current-state investigation, source reconciliation, solution selection, and decomposition to the receiving agent?
+- Is every binding scope decision or technical mechanism explicitly approved by Jorge, required by a verified public or runtime contract, or demanded by a genuine interoperability, security, or legal requirement rather than inferred from contextual source material?
+- Did I stop for Jorge's clarification instead of dispatching when source wording was ambiguous, strange, conflicting, too broad, overscoped, or supported materially different outcomes?
 - Are exact paths present only because Jorge, an approved plan/finding, or a real isolation boundary requires them?
 - Did I avoid dictating procedure for a broad review/investigation?
 - Did I pass concise findings instead of history and transcripts?
