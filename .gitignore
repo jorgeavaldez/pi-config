@@ -16,7 +16,8 @@ extensions/node_modules/
 PLAN.md
 
 # Binary/executable directory
-bin/
+bin/*
+!bin/pi-zsh
 
 codex-accounts.json
 node_modules/

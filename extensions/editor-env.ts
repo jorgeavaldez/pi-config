@@ -41,9 +41,12 @@ export default function editorEnvExtension(_pi: ExtensionAPI) {
   }
 
   if (!isExecutable(wrapperPath)) {
-    console.warn(
-      `editor-env: wrapper not found or not executable at ${wrapperPath}. Leaving EDITOR/VISUAL unchanged.`
-    );
+    // The Neovim RPC wrapper is optional on Android, where a local editor is used.
+    if (process.platform !== "android") {
+      console.warn(
+        `editor-env: wrapper not found or not executable at ${wrapperPath}. Leaving EDITOR/VISUAL unchanged.`
+      );
+    }
     return;
   }
 
