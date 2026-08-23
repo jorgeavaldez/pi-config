@@ -1,6 +1,6 @@
 {
   "lastChangelogVersion": "0.84.2",
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "xhigh",
   "theme": "light/dark",
   "enabledModels": [
     "anthropic/claude-fable-5",
@@ -19,6 +19,9 @@
     "./private-skills/"
   ],
   "packages": [
-    "npm:@ff-labs/pi-fff"
+    {
+      "source": "npm:@ff-labs/pi-fff",
+      "autoload": false
+    }
   ]
 }
