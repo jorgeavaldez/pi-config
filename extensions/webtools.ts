@@ -164,8 +164,8 @@ Parameters:
 - contextMaxCharacters: Maximum characters for context (default: 10000)`,
 		promptSnippet: "Search the web for current information, recent docs, or facts beyond your knowledge cutoff.",
 		promptGuidelines: [
-			"Use this tool for recent information, live documentation lookups, or fact verification that may be newer than the model's training data.",
-			"Never include secrets, private URLs, credentials, API keys, or other sensitive data in web search queries.",
+			"Use websearch for recent information, live documentation lookups, or fact verification that may be newer than the model's training data.",
+			"Never include secrets, private URLs, credentials, API keys, or other sensitive data in websearch queries.",
 		],
 
 		parameters: Type.Object({
@@ -295,9 +295,9 @@ Parameters:
 - maxCharacters: Maximum characters to extract per page (default: 3000)`,
 		promptSnippet: "Fetch full webpage content from one or more known URLs.",
 		promptGuidelines: [
-			"Use this tool when you already have a URL and want the full page contents, especially after websearch.",
-			"Batch multiple URLs in one call when useful.",
-			"Never include private URLs, credentials, tokens, or other sensitive data in fetched URLs.",
+			"Use webfetch when you already have a URL and want the full page contents, especially after websearch.",
+			"Batch multiple URLs in one webfetch call when useful.",
+			"Never include private URLs, credentials, tokens, or other sensitive data in webfetch URLs.",
 		],
 
 		parameters: Type.Object({
