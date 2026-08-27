@@ -87,9 +87,11 @@ This gives `/edit` and `Ctrl+G` a deterministic host-aware external edit path:
 
 For caveats and debugging steps, see [`docs/PI_NVIM_RPC.md`](docs/PI_NVIM_RPC.md).
 
-### herdr-agent-state
+### Herdr agent and compaction state
 
-Publishes Pi session and agent state to Herdr when `HERDR_ENV=1`. This file is managed by the Herdr integration and should not be edited manually.
+`herdr-agent-state` publishes authoritative Pi session and lifecycle state to Herdr when `HERDR_ENV=1`. Although Herdr manages this file, the repository carries a documented local patch so Pi compaction reports as semantic `working` state.
+
+`herdr-compaction-state` separately owns the display-only `compacting` token, outcome notifications, and cleanup. See [`docs/herdr-compaction.md`](docs/herdr-compaction.md) for the ownership model, overwrite warning, upgrade procedure, validation, and troubleshooting.
 
 ### review
 

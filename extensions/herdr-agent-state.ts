@@ -178,6 +178,7 @@ export default function (pi) {
   }
 
   let agentActive = false;
+  let compactionActive = false;
   let blockedCount = 0;
   let blockedMessage: string | undefined;
   let lastState: AgentState | undefined;
@@ -188,7 +189,7 @@ export default function (pi) {
     if (blockedCount > 0) {
       return { state: "blocked" as const, message: blockedMessage };
     }
-    if (agentActive) {
+    if (agentActive || compactionActive) {
       return { state: "working" as const, message: undefined };
     }
     return { state: "idle" as const, message: undefined };
@@ -229,12 +230,41 @@ export default function (pi) {
       return;
     }
     rootSession = true;
+    compactionActive = false;
     updateSessionRef(ctx);
     await reportSession(event?.reason);
     // A reload can replace this extension mid-run without emitting another agent_start.
     agentActive = ctx?.isIdle?.() === false;
     publishState(true);
   });
+
+  // Local patch for https://github.com/herdrdev/herdr/issues/1853: Pi 0.84.3
+  // now exposes reliable success, failure, and cancellation events for compaction,
+  // but Herdr's bundled v8 Pi integration does not consume them yet. Herdr
+  // integration updates overwrite this managed file; remove this local patch
+  // once the bundled integration reports compaction as working.
+  function finishCompaction() {
+    if (!rootSession || !compactionActive) {
+      return;
+    }
+    compactionActive = false;
+    publishState();
+  }
+
+  pi.on("session_before_compact", (event) => {
+    if (!rootSession) {
+      return;
+    }
+    compactionActive = true;
+    publishState();
+    event.signal.addEventListener("abort", finishCompaction, { once: true });
+    if (event.signal.aborted) {
+      finishCompaction();
+    }
+  });
+
+  pi.on("session_compact", finishCompaction);
+  pi.on("session_compact_failed", finishCompaction);
 
   pi.on("agent_start", (_event, ctx) => {
     if (!rootSession) {
