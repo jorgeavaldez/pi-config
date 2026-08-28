@@ -22,6 +22,7 @@
     {
       "source": "npm:@ff-labs/pi-fff",
       "autoload": false
-    }
+    },
+    "npm:pi-web-search"
   ]
 }
