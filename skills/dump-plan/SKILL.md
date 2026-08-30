@@ -38,9 +38,15 @@ Do not include full implementations or turn the plan into a research transcript.
 
 Resolve the vault from an explicit path or the `vaultPath` in the nearest `.pi/obsidian.json`, falling back to `~/.pi/agent/obsidian.json`. If the current directory is already inside that vault, use it directly. If the vault cannot be resolved, ask the user.
 
+After resolving it, locate and read the vault's applicable agent/context instructions, following local context-file indirections, before choosing personal-project placement or links. Treat those local instructions as authoritative.
+
 Choose the destination by inspecting how the same project and kind of work are already organized. Keep work and personal material separate. Prefer updating a clearly related existing plan over creating a duplicate; otherwise choose a concise topic-based filename. Ask only when multiple placements are genuinely plausible.
 
 Search for useful internal context and use Obsidian wikilinks to connect the plan to existing project documentation, prior plans, overviews, decisions, or reference notes. Link only material that helps explain or execute the work. Use normal Markdown links for external sources and inline code for repository paths.
+
+For a scoped personal-project plan, use the local instructions and nearby organization to find the existing stable project home. Place the plan in the project's established area and add a useful wikilink from the plan back to that home. Use the home—not the scoped plan—for links that express generic project identity; keep the plan as task-specific evidence. Backlinks are enough for normal discovery, so do not require a complete manually synchronized plan index or a reciprocal home edit.
+
+Update the home only when the new plan changes the project's durable identity or stable mental model/navigation, or is a genuinely foundational record. Do not update it for volatile status, task lists, roadmaps, or every new plan. Do not create a home just to satisfy this convention for a one-off project; ask when project identity or placement is genuinely ambiguous.
 
 Follow nearby vault conventions when they are useful, but do not add metadata or sections merely for consistency.
 

@@ -35,11 +35,17 @@ Clearly distinguish facts from assumptions, completed work from planned work, an
 
 Resolve the vault from an explicit path or the `vaultPath` in the nearest `.pi/obsidian.json`, falling back to `~/.pi/agent/obsidian.json`. If the current directory is already inside that vault, use it directly. If the vault cannot be resolved, ask the user.
 
+After resolving it, locate and read the vault's applicable agent/context instructions, following local context-file indirections, before choosing personal-project placement or links. Treat those local instructions as authoritative.
+
 Choose the destination by the note's domain and purpose, using the vault's existing organization. Depending on the content, the right home may be project documentation, a work document, an overview, a reference or learning note, or a personal project area. Preserve work and personal boundaries. Inspect nearby notes and prefer updating a clear canonical note over creating a near-duplicate. Ask only when multiple placements are genuinely plausible.
 
 Search the vault for directly relevant context. Use Obsidian wikilinks to connect the overview to existing plans, documentation, decisions, project notes, prompts, or reference material where those links help future navigation or understanding. Do not invent links merely to fill a related-notes section. Use normal Markdown links for external sources and inline code for repository paths.
 
-Follow nearby vault conventions when useful, but do not force frontmatter, a rigid template, or reciprocal edits to other notes. Obsidian backlinks are usually enough.
+For a scoped personal-project overview or record, use the local instructions and nearby organization to find the existing stable project home. Place the document in the project's established area and add a useful wikilink from it back to that home. Use the home—not a scoped plan or task-specific record—for links that express generic project identity. Backlinks are enough for normal discovery, so do not require a complete manually synchronized plan index or a reciprocal home edit.
+
+Update the home only when the new document changes the project's durable identity or stable mental model/navigation, or is a genuinely foundational record. Do not update it for volatile status, task lists, roadmaps, or every new note. Do not create a home just to satisfy this convention for a one-off project; ask when project identity or placement is genuinely ambiguous.
+
+Follow nearby vault conventions when useful, but do not force frontmatter or a rigid template.
 
 ## Finish
 

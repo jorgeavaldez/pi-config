@@ -1,13 +1,34 @@
 ---
 name: herdr
-description: "Control herdr from inside it. Manage workspaces and tabs, split panes, spawn agents, read output, and wait for state changes — all via CLI commands that talk to the running herdr instance over a local unix socket. Use when running inside herdr (HERDR_ENV=1)."
+description: "Control Herdr from a managed pane or, when explicitly requested, control an exact named Herdr session on an SSH host. Manage workspaces, tabs, panes, agents, output, and state changes without confusing local and remote sessions."
 ---
 
 # herdr — agent skill
 
-before using this skill, check that `HERDR_ENV=1`. if it is not set to `1`, say you are not running inside a herdr-managed pane and stop. do not inspect or control the focused herdr pane from outside herdr.
+choose the control mode before issuing any Herdr command:
 
-you are running inside herdr, a terminal-native agent multiplexer. herdr gives you workspaces, tabs, and panes — each pane is a real terminal with its own shell, agent, server, or log stream — and you can control all of it from the cli.
+- **local mode:** require `HERDR_ENV=1`. If it is not set to `1`, do not inspect or control the local or focused Herdr session from outside Herdr.
+- **remote mode:** use this only when the user explicitly requested an SSH-accessible remote Herdr and the exact SSH target and named Herdr session are known. `HERDR_ENV=1` is not required in the dispatching shell because every control command runs on the remote host against that named session. If the SSH target or session is missing or ambiguous, ask rather than refusing or guessing.
+
+Remote mode is not permission to control a local focused session from outside Herdr. Never fall back from a failed remote route to local Herdr, a default remote session, or another live session.
+
+Run remote commands through an SSH login shell. First verify that the named session already exists without attaching to or creating it:
+
+```bash
+ssh <ssh-target> 'zsh -ic '\''herdr session list --json'\'''
+```
+
+Then scope every session-specific command with `--session`:
+
+```bash
+ssh <ssh-target> 'zsh -ic '\''herdr --session <session-name> workspace list'\'''
+```
+
+`herdr --remote <ssh-target>` attaches an interactive TUI; it is not the noninteractive command transport. For orchestration, invoke `herdr --session <session-name> ...` over SSH. Inspect the installed remote `herdr --help` and relevant command groups before relying on lifecycle syntax because local and remote versions may differ. Transport multiline prompts through standard input rather than interpolating them into remote shell source.
+
+Herdr is a terminal-native agent multiplexer. It gives you workspaces, tabs, and panes — each pane is a real terminal with its own shell, agent, server, or log stream — and you can control all of it from the CLI. The examples below show the inner Herdr commands: run them directly in local mode or through the verified SSH and named-session route in remote mode.
+
+In remote mode no pane in the target session is the coordinator's current pane. Never treat the remote focused pane as yours, rely on remote focus or caller context, or use an implicit current workspace, tab, or pane. Use explicit live IDs parsed from the named remote session and keep focus unchanged.
 
 this means you can:
 
@@ -19,7 +40,7 @@ this means you can:
 - wait for another agent to finish
 - spawn more agent instances
 
-the `herdr` binary is available in your PATH. its workspace, tab, pane, and wait commands talk to the running herdr instance over a local unix socket.
+the `herdr` binary is available in your local PATH or the remote login shell's PATH. its workspace, tab, pane, and wait commands talk to the selected Herdr instance over that host's unix socket.
 
 if you need the raw protocol or full api reference, read the [socket api docs](https://herdr.dev/docs/socket-api/).
 
@@ -51,7 +72,7 @@ see what panes exist and which one is focused:
 herdr pane list
 ```
 
-the focused pane is yours. other panes are your neighbors.
+In local mode, the focused pane is yours and other panes are your neighbors. In remote mode, focus belongs to a remote client or user; map the intended task workspace explicitly instead.
 
 list workspaces:
 

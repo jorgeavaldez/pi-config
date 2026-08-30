@@ -1,6 +1,6 @@
 ---
 name: herdr-manager
-description: Coordinate Herdr panes and Pi agents safely by mapping tasks to exact workspaces, panes, sessions, cwd, and revisions; routing work; and queueing local follow-ups without cross-workspace confusion.
+description: Coordinate local or explicitly named remote Herdr sessions safely by mapping tasks to exact hosts, workspaces, panes, Pi sessions, cwd, and revisions; routing work; and queueing task-local follow-ups without cross-workspace confusion.
 ---
 
 # Herdr Manager
@@ -15,14 +15,20 @@ Ownership is strict:
 
 Load `herdr` before controlling panes. Load `agent-prompt-drafting` before writing or sending agent instructions.
 
-## Environment
+## Environment and control route
 
-Verify `HERDR_ENV=1` before acting. If it is not, stop.
-Keep the current pane as coordinator unless the user says otherwise. Do not perform implementation, investigation, or review-fix work in the coordinator pane.
+Establish one route before acting:
+
+- **Local:** require `HERDR_ENV=1` and keep the current pane as coordinator unless the user says otherwise.
+- **Remote:** use only an explicitly requested SSH target and exact named Herdr session. Verify the session through the SSH transport defined by the `herdr` skill, then scope every session-specific command to it. The dispatching shell does not need `HERDR_ENV=1`.
+
+If neither route is fully identified, ask whether Jorge wants to use a local Herdr-managed pane or which SSH target and named remote session to use. Do not flatly refuse, guess a target, use a default session, or require Jorge to pre-start a Pi agent in the remote Herdr.
+
+Do not mix local and remote inventory or actions. Remote authorization is limited to the exact target and named session the user selected. Do not perform implementation, investigation, or review-fix work in the coordinator pane.
 
 ## Inventory and map live state
 
-Before every orchestration action, read current state:
+Before every orchestration action, read current state through the selected route:
 
 ```bash
 herdr workspace list
@@ -30,17 +36,19 @@ herdr pane list
 herdr tab list --workspace <workspace-id>
 ```
 
+In remote mode these are the inner commands executed over SSH with the exact named session; never run their unscoped local equivalents.
+
 Map each task to:
 
 ```text
-task -> workspace -> tab -> pane -> session/tree -> cwd -> revision
+task -> control route -> SSH target (remote only) -> Herdr session -> workspace -> tab -> pane -> Pi session/tree -> cwd -> revision
 ```
 
 Use `herdr pane read <pane> --source recent-unwrapped --lines 80` only when needed to confirm the workstream, session, or context usage.
 For repository work, verify the target cwd and revision with read-only `jj` commands.
 
 Herdr state is concurrent and user-controlled; expect workspaces, tabs, panes, focus, and agent status to change between commands.
-Immediately before each action, reread and actually verify the target's current workspace, tab, pane, session, cwd, revision, and status as applicable.
+Immediately before each action, reread and actually verify the control route, SSH target and named Herdr session when remote, workspace, tab, pane, Pi session/tree, cwd, revision, and status as applicable.
 Do not batch an inventory command with a hard-coded action or treat a successful listing as verification without checking its result.
 If the target changed or disappeared, stop and resolve the live mapping again.
 
@@ -115,7 +123,7 @@ After parallel implementation, use one serial reconciliation review when the sea
 Report only operational routing state:
 
 - task or phase;
-- workspace, pane, session/tree, cwd, and revision when relevant;
+- control route, SSH target and named Herdr session when remote, workspace, pane, Pi session/tree, cwd, and revision when relevant;
 - current agent status and material context pressure;
 - continuation or recovery choice;
 - watcher trigger/target mapping;
