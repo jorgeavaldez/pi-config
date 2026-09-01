@@ -1,11 +1,11 @@
 ---
 name: pr-review-comments
-description: Fetches PR review comments from GitHub, batches similar comments together using semantic analysis, and walks through each batch one at a time with user confirmation between each. Use when the user wants to address PR review feedback, fix review comments, or work through code review suggestions.
+description: Fetches and triages PR review comments, then addresses the valid in-scope feedback in the smallest authorized batch. Pauses for the user only when scope, validity, or multiple substantive batches require a decision. Use when the user wants to address PR review feedback, fix review comments, or work through code review suggestions.
 ---
 
 # PR Review Comments Skill
 
-This skill helps you systematically work through PR review comments by batching similar ones together and addressing them one batch at a time with user feedback between each.
+This skill helps you triage PR review comments and address the valid in-scope feedback with the least process needed for the actual change.
 
 ## Critical Safety Rule — No Source-Control Mutations or Offers
 
@@ -31,11 +31,13 @@ Important interpretation rules:
 ## Workflow Overview
 
 1. Fetch comments into generated `*-review-feedback.md` files
-2. Analyze and batch comments in the active chat/session
-3. Present the triage overview and wait for user approval
-4. Work through batches ONE AT A TIME
-5. After each batch: delete processed comment files, ask for feedback
-6. WAIT for user response before proceeding to next batch
+2. Analyze every comment and identify the smallest complete current-scope batch
+3. If the user already authorized valid in-scope fixes and no decision is needed, proceed directly; otherwise present concise triage and wait
+4. Implement one bounded batch, validate it, and delete its processed comment files
+5. Pause only between multiple substantive batches or when the user must decide scope or validity
+6. Report once when the final batch is complete
+
+This workflow does not require separate planning, triage, implementation, or review agents. When operating through a manager, prefer one existing task owner for the bounded follow-up unless a real isolation or ownership boundary requires another agent.
 
 ## Step 1: Fetch PR Review Comments
 
@@ -91,7 +93,7 @@ For each batch, note:
 - Why they were grouped together
 - The files affected
 
-**Important**: A batch can be a single comment if it's unique. Don't force unrelated comments together.
+A batch can be a single comment when it requires an independent design or validation path. Conversely, do not split comments that fit one bounded edit-and-validation seam merely to preserve workflow stages. Minimize the number of batches; batching is not an outcome by itself.
 
 ### 1.5 Prepare In-Session Triage Summary
 
@@ -104,40 +106,48 @@ Keep the triage summary in the active chat/session instead of writing progress o
 - **Status**: Which batch is currently being discussed or worked
 - **Notes**: Observations, decisions, anything relevant
 
-### 1.6 Present Triage Overview and Get Approval
+### 1.6 Choose the Direct or Approval Path
 
-**STOP and present a CONCISE overview to the user.** Format:
+Proceed directly when all of these are true:
+
+- the user already authorized addressing valid, reasonably in-scope review feedback;
+- every item to be edited is clearly CURRENT;
+- the CURRENT items fit one bounded implementation and validation seam;
+- no FOLLOW-UP or QUESTIONABLE item must be promoted to make the fix complete; and
+- the work does not introduce a materially different outcome or unapproved source-control/external action.
+
+Before editing on the direct path, state one concise in-progress line with the comment IDs and the bounded outcome, then continue to [Working on a Batch](#working-on-a-batch). Do not add a redundant approval gate.
+
+Stop for approval when validity or scope is genuinely ambiguous, the user requested review before editing, or more than one substantive batch is necessary. Use this concise format:
 
 > **PR Review Triage**
-> 
+>
 > **Will address (N comments in M batches):**
 > - Batch 1 - [Name]: [brief description] (N comments)
 > - Batch 2 - [Name]: [brief description] (N comments)
-> 
+>
 > **Follow-ups (not part of this PR):**
 > - [file:line] - [issue] — [why it can wait]
 >
 > **Questionable (need your input):**
 > - [file:line] - [issue] — [your concern]
-> 
+>
 > **Recommending to skip:**
 > - [file:line] - [issue] — [reason]
 >
 > Let me know if you want to exclude anything, promote a follow-up, or adjust the batches.
 
-**WAIT for user response.** Do not proceed until they approve or provide feedback.
+Wait only when this approval path applies.
 
 ### 1.7 Handle Triage Feedback
 
-Process user feedback:
+For the approval path, process user feedback:
 - **Exclude comments**: Remove from batches, add to Excluded section with user's reasoning
 - **Promote comments**: Add an explicitly approved FOLLOW-UP or QUESTIONABLE comment to an appropriate current batch
 - **Adjust batches**: Merge, split, or reorder as requested
 - **Approve as-is**: Proceed to work
 
-If changes were made, present the updated overview and ask for approval again.
-
-Once approved, proceed to the first batch.
+If a material decision remains after the update, present the revised overview and ask once more. Otherwise proceed to the first batch.
 
 ### 1.8 Begin Working
 
@@ -221,17 +231,21 @@ After completing the batch, delete the processed comment files for this batch:
 rm {comment-id}-review-feedback.md
 ```
 
-### 2.5 Ask for Feedback
+### 2.5 Continue or Complete
 
-**STOP and ask the user**:
+If another approved substantive batch remains, stop and ask:
 
 > "Batch N complete. I [brief summary of changes made]. Changes are local and have not been committed, pushed, or resolved on GitHub.
-> 
+>
 > Any feedback on these changes, or should I proceed to Batch N+1?"
 
-**WAIT for the user's response.** Do not proceed until they respond. Do not treat "proceed" as permission to commit, move bookmarks, push, update the PR branch, offer source-control actions, or resolve GitHub comments.
+Wait before the next batch. Do not treat "proceed" as permission to commit, move bookmarks, push, update the PR branch, offer source-control actions, or resolve GitHub comments.
+
+If this was the only or final batch, continue directly to [Completion](#completion) and report once. Do not create an extra approval gate or independent review pass unless the user requested it or a concrete delivery requirement demands it.
 
 ### 2.6 Handle User Response
+
+When another batch remains:
 
 - If user provides **feedback**: Address it, summarize what changed, then ask again if ready to proceed
 - If user says to **proceed**: Go to the next pending batch and repeat from [Working on a Batch](#working-on-a-batch)
@@ -255,7 +269,7 @@ When all batches are done:
 
 - **Complete comment investigation before editing** - classify CURRENT work separately from FOLLOW-UP work
 - **Make code edits sequentially** - actual edits should be done one at a time to avoid conflicts
-- **Always WAIT for user response between batches** - never auto-proceed
+- **Wait between multiple substantive batches or for real decisions** - do not add a pause before or after a single preauthorized bounded batch
 - **Never mutate source control from this skill and never offer to do so** - no commits, bookmark moves, branch moves, pushes, rebases, amends, or prompts asking to update the PR branch
 - **Resolve comments on GitHub only after fixes are visible on the PR or explicit user instruction** - use the `resolve-pr-comment` skill
 - **Delete comment files after each batch** - not all at the end

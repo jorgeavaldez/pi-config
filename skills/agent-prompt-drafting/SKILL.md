@@ -20,6 +20,8 @@ A prompt is not successful if it causes the recipient to compact, lose requireme
 Default to one bounded task packet that the agent can complete in one context window.
 Keep the task inline and self-contained, but do not reproduce context the agent can discover from the repository.
 
+Context budgeting is the coordinator's responsibility. Do not ask a recipient to monitor a context percentage, prevent automatic compaction, or decide when its own session is too full. Size and decompose the work before dispatch, and route later substantial seams to fresh sessions rather than relying on compaction.
+
 A short prompt is not an underspecified prompt.
 State the outcome, relevant issues, constraints, and stop condition, then trust the agent to choose the mechanics.
 
@@ -36,10 +38,12 @@ Warning signs include:
 - whole-diff audits plus fixes;
 - large behavior matrices or many test suites;
 - migrations, schemas, workflows, provider integrations, or failure recovery combined in one task;
+- planning that must reconcile several independent entry-point families such as UI, API, agents, workflows, and infrastructure;
 - an existing recipient already near or past 50% context usage.
 
-When these signs appear, **do not draft or send the full prompt yet**.
-First propose a small batch sequence to Jorge and wait for approval.
+When these signs appear, **do not draft or send the full prompt**. If delegation of the overall outcome is already authorized, decompose it into bounded task-local sessions under one integration owner without adding approval ceremony. Ask Jorge only when decomposition changes approved scope, ownership, workspace, source-control permissions, external actions, or another binding constraint.
+
+For broad planning or investigation, do not make one nominal planner inspect every independent surface. Route non-overlapping read-only evidence questions to fresh sessions and have the integration owner synthesize them. A single owner does not require a single agent session.
 
 An implementation phase may contain at most two batches. Each batch must fit one session and produce an independently reviewable, mergeable change. If a third batch is needed, redesign the phase instead of extending the sequence.
 
@@ -164,6 +168,7 @@ Never append a prompt to existing input.
 ```text
 Mode: PLANNING ONLY.
 Do not modify files or source-control state.
+Identify the smallest missing delta. Before proposing a new role, permission, schema field, workflow, public API, or configuration primitive, verify whether existing primitives can express the outcome by composition or narrowing.
 Produce a concise implementation plan covering the key decisions, likely files, focused validation, and real open questions.
 Stop for Jorge’s approval before implementation.
 ```
@@ -297,11 +302,12 @@ Do not send prompts that:
 Before sending, answer yes:
 
 - Can this task reasonably finish in one context window without compaction?
-- If it is broad or highly technical, did I offer a batch plan first?
+- If it is broad or highly technical, did I decompose it before drafting rather than outsourcing context management to the recipient?
 - Is this prompt only for the current approved batch?
 - Does its phase contain at most two implementation batches?
 - Did I state target, mode, edit permissions, source-control permissions, task, output, and stop condition?
 - Does the prompt express the actual user outcome and semantic boundary rather than copying a ticket or document's wording and decomposition?
+- For planning, does the prompt require checking composition or narrowing of existing primitives before proposing new ones?
 - For a task-manager, planning, or investigation delegation, did I leave current-state investigation, source reconciliation, solution selection, and decomposition to the receiving agent?
 - Is every binding scope decision or technical mechanism explicitly approved by Jorge, required by a verified public or runtime contract, or demanded by a genuine interoperability, security, or legal requirement rather than inferred from contextual source material?
 - Did I stop for Jorge's clarification instead of dispatching when source wording was ambiguous, strange, conflicting, too broad, overscoped, or supported materially different outcomes?

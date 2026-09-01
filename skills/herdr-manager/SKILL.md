@@ -24,19 +24,19 @@ Establish one route before acting:
 
 If neither route is fully identified, ask whether Jorge wants to use a local Herdr-managed pane or which SSH target and named remote session to use. Do not flatly refuse, guess a target, use a default session, or require Jorge to pre-start a Pi agent in the remote Herdr.
 
-Do not mix local and remote inventory or actions. Remote authorization is limited to the exact target and named session the user selected. Do not perform implementation, investigation, or review-fix work in the coordinator pane.
+Do not mix local and remote inventory or actions. Remote authorization is limited to the exact target and named session the user selected. Do not perform implementation, investigation, or review-fix work in the coordinator pane. This separation does not require a new agent for every workflow stage: route a bounded follow-up to one existing task owner whenever that is the smallest safe handoff.
 
 ## Inventory and map live state
 
-Before every orchestration action, read current state through the selected route:
+At the start of an orchestration sequence, establish the selected route and map only the task-owned workspace:
 
 ```bash
 herdr workspace list
-herdr pane list
 herdr tab list --workspace <workspace-id>
+herdr pane list --workspace <workspace-id>
 ```
 
-In remote mode these are the inner commands executed over SSH with the exact named session; never run their unscoped local equivalents.
+In remote mode these are the inner commands executed over SSH with the exact named session; never run their unscoped local equivalents. Use an unscoped pane listing only when the target workspace cannot yet be identified or the authorized task genuinely spans workspaces. Do not stream unrelated workspace or pane state into the model context.
 
 Map each task to:
 
@@ -44,16 +44,13 @@ Map each task to:
 task -> control route -> SSH target (remote only) -> Herdr session -> workspace -> tab -> pane -> Pi session/tree -> cwd -> revision
 ```
 
-Use `herdr pane read <pane> --source recent-unwrapped --lines 80` only when needed to confirm the workstream, session, or context usage.
-For repository work, verify the target cwd and revision with read-only `jj` commands.
+Use `herdr pane read <pane> --source recent-unwrapped --lines 80` only when needed to confirm the workstream, session, or context usage. Read only enough lines to make the routing decision. For repository work, verify the target cwd and revision with read-only `jj` commands when the action depends on them.
 
-Herdr state is concurrent and user-controlled; expect workspaces, tabs, panes, focus, and agent status to change between commands.
-Immediately before each action, reread and actually verify the control route, SSH target and named Herdr session when remote, workspace, tab, pane, Pi session/tree, cwd, revision, and status as applicable.
-Do not batch an inventory command with a hard-coded action or treat a successful listing as verification without checking its result.
-If the target changed or disappeared, stop and resolve the live mapping again.
+Herdr state is concurrent and user-controlled; expect workspaces, tabs, panes, focus, and agent status to change between commands. Immediately before a control action, refresh the known target with the applicable exact commands (`workspace get`, `tab get`, `pane get`, and `agent get`); fall back to a workspace-scoped list when an exact lookup is unavailable or the mapping is ambiguous. Rerun the scoped topology lists after a topology change or when an ID, owner, or task mapping may have changed.
 
-Never rely on remembered pane IDs, tab numbers, status, cwd, or revisions.
-If multiple live targets fit the user's reference, name them and ask.
+Do not batch a state refresh with a hard-coded action or treat a successful lookup as verification without checking its result. Parse newly created IDs from the creation response, then verify the new target before prompting or starting dependent work. If the target changed or disappeared, stop and resolve the live mapping again.
+
+Never rely on remembered pane IDs, tab numbers, status, cwd, or revisions. If multiple live targets fit the user's reference, name them and ask.
 
 ## Routing rules
 
@@ -61,26 +58,38 @@ If multiple live targets fit the user's reference, name them and ask.
 - Reuse a workspace only for the same workstream or when the user explicitly requests that exact reuse; otherwise obtain permission for a fresh isolated workspace.
 - Do not create Herdr or jj workspaces, worktrees, branches, bookmarks, or clones without explicit permission.
 - Do not start multiple agents editing the same filesystem workspace unless explicitly asked.
-- Route review work to a clean tab in the workspace that owns the work. Split investigation or follow-up panes beside the pane that owns the work.
+- When a distinct review, investigation, or follow-up agent is justified, place it in the task-owning workspace and keep its ownership separate from the file editor.
 - Keep bookkeeping in the appropriate vault/bookkeeping context.
 - Never send a prompt to a `working` agent unless the user explicitly asks to interrupt.
 - Confirm the target is idle and clear staged input before sending; never append to existing input.
 
+### Proportional orchestration
+
+Delegation is a real boundary, not a default phase transition, but minimizing agent count is not the goal. Keep one integration owner while using as many bounded task-local sessions as the work genuinely requires.
+
+- Reuse an agent only for a small follow-up that fits its current role, permissions, and remaining context.
+- Use fresh sessions for substantial new roles, independent investigation seams, implementation batches, or validation ownership rather than carrying accumulated context forward.
+- For broad read-only discovery, split non-overlapping evidence questions across fresh sessions and synthesize centrally; do not make one nominal planner inspect every layer.
+- Keep one file editor unless parallel editing was explicitly authorized. Read-only investigators may work alongside that editor when their seams are independent.
+- Do not create tabs merely for phase symmetry, workflow ceremony, or visibility.
+
+A skill's internal stages do not by themselves justify separate agents. Apply the global smallest-complete-outcome rule to each assignment, not to the number of sessions.
+
 Workspace isolation and Pi session continuity are separate. A new workspace does not authorize a fresh Pi session when the user requested the same session or tree.
 
-## Session continuity
+## Session continuity and context ownership
 
-Treat “that agent,” “same agent,” “continue from here,” and `/tree` references as exact routing requirements.
-Use the requested session/tree when it can be identified safely. Do not replace it with copied context in a fresh session.
+Treat “that agent,” “same agent,” “continue from here,” and `/tree` references as exact routing requirements. Use the requested session/tree when it can be identified safely; do not replace explicit continuity with copied context in a fresh session.
 
-When the user did not require a specific continuation, choose the smallest safe recovery:
+Otherwise, context budgeting is the manager's responsibility. Pi recipients do not control automatic compaction and cannot reliably self-police their live context usage. Never delegate that responsibility in a prompt.
 
-1. `/tree` to a suitable point;
-2. `/compact` when the objective is unchanged;
-3. an approved fork from a finalized plan session;
-4. a fresh session with the plan path and concise task-local context.
+- Estimate task size before dispatch and decompose work that could consume one session.
+- Inspect available pane or session metadata before assigning a follow-up; never rely on the child to report its own percentage.
+- Reuse a session only for a genuinely small continuation with ample context.
+- Prefer a fresh session with a concise task-local handoff for a substantial new role, seam, batch, or validation pass.
+- Use `/tree` when exact earlier-session continuity is necessary. Use `/compact` only when Jorge explicitly requests it or a fresh task-local handoff cannot preserve required continuity.
 
-Avoid assigning substantial new work to a session above 50% context. Above 70%, prefer recovery or fresh context.
+Do not assign substantial new work to a session near 50% context. Treat 70% as unavailable for further substantive work, not as a cue to compact and continue.
 
 ## Delegation
 
@@ -114,7 +123,9 @@ After queueing, report the target, trigger, watcher, dependency, and session pla
 
 ## Review and integration routing
 
-Run review and code-quality work in a clean tab in the implementation workspace. If implementation is still running, queue review after the implementation pane reaches `done`.
+Create an independent review agent only when the user requests one or a concrete risk, ownership boundary, integration seam, or delivery gate justifies it. Implementation having occurred, or review comments having been addressed, is not by itself a reason for another review pass. A bounded follow-up that the task owner has inspected and validated should normally finish with one concise report.
+
+When independent review is justified, run it in a clean tab in the implementation workspace. If implementation is still running, queue review after the implementation pane reaches `done`.
 
 After parallel implementation, use one serial reconciliation review when the seams share interfaces or design. Use parallel reviewers only for genuinely independent surfaces.
 
@@ -130,4 +141,4 @@ Report only operational routing state:
 - blockers or user decisions needed;
 - next queued or recommended routing action.
 
-Do not guess when an agent raises a product, scope, or session ambiguity. Surface it to the user.
+Do not include raw global inventories or long child transcripts in routine reports; summarize only the mapped target and material result. Do not guess when an agent raises a product, scope, or session ambiguity. Surface it to the user.
