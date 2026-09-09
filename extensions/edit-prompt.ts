@@ -670,10 +670,8 @@ export default function editPromptExtension(pi: ExtensionAPI) {
       const { cursorLine, timestamp } = prepareFile(filepath);
 
       // 5. Open editor
-      const exitCode = await openInEditor(filepath, cursorLine, ctx);
-
-      if (exitCode === null) {
-        ctx.ui.notify("Editor closed unexpectedly", "warning");
+      if (!(await openInEditor(filepath, cursorLine, ctx))) {
+        ctx.ui.notify("Editor cancelled or failed; nothing submitted", "warning");
         return;
       }
 

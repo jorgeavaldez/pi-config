@@ -9,7 +9,7 @@
  * Otherwise, a temporary file is created.
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { CustomEditor, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -159,13 +159,12 @@ function cleanupTempFile(tempFile: string): void {
 }
 
 export default function editorOpenExtension(pi: ExtensionAPI) {
-  pi.registerShortcut("ctrl+g", {
-    description: "Open editor with last message reference and prompt section",
-    handler: async (ctx) => {
-      if (ctx.mode !== "tui") {
-        return;
-      }
+  pi.on("session_start", (_event, ctx) => {
+    if (ctx.mode !== "tui") {
+      return;
+    }
 
+    const openPrompt = async () => {
       const timestamp = generateTimestamp();
       const reference = getLastMessageContent(ctx);
       const prefillPrompt = ctx.ui.getEditorText();
@@ -186,10 +185,8 @@ export default function editorOpenExtension(pi: ExtensionAPI) {
       }
 
       try {
-        const exitCode = await openInEditor(filepath, cursorLine, ctx);
-
-        if (exitCode === null) {
-          ctx.ui.notify("Editor closed unexpectedly", "warning");
+        if (!(await openInEditor(filepath, cursorLine, ctx))) {
+          ctx.ui.notify("Editor cancelled or failed; nothing submitted", "warning");
           return;
         }
 
@@ -219,6 +216,21 @@ export default function editorOpenExtension(pi: ExtensionAPI) {
           cleanupTempFile(filepath);
         }
       }
-    },
+    };
+
+    ctx.ui.setEditorComponent((tui, theme, keybindings) =>
+      new (class extends CustomEditor {
+        override handleInput(data: string): void {
+          // Search and other focused UI handle input before it reaches this editor.
+          if (keybindings.matches(data, "app.editor.external")) {
+            void openPrompt().catch((error: unknown) => {
+              ctx.ui.notify(`Editor-open failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+            });
+            return;
+          }
+          super.handleInput(data);
+        }
+      })(tui, theme, keybindings, { embedWorkingStatus: true })
+    );
   });
 }

@@ -98,21 +98,21 @@ export function getEditorArgs(filePath: string, cursorLine?: number): string[] {
 
 /**
  * Open a file in the user's editor, suspending TUI during editing.
- * Returns the editor's exit code, or null if something went wrong.
+ * Returns true only when the editor exits successfully (status 0).
  */
 export async function openInEditor(
   filepath: string,
   cursorLine: number | undefined,
   ctx: ExtensionContext
-): Promise<number | null> {
+): Promise<boolean> {
   if (ctx.mode !== "tui") {
-    return null;
+    return false;
   }
 
   const editor = getEditor();
   const editorArgs = getEditorArgs(filepath, cursorLine);
 
-  return ctx.ui.custom<number | null>((tui: TUI, _theme, _kb, done) => {
+  return ctx.ui.custom<boolean>((tui: TUI, _theme, _kb, done) => {
     // Stop TUI to release terminal
     tui.stop();
 
@@ -130,7 +130,7 @@ export async function openInEditor(
     tui.requestRender(true);
 
     // Signal completion
-    done(result.status);
+    done(result.status === 0);
 
     // Return empty component (immediately disposed since done() was called)
     const emptyComponent: Component = {

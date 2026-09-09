@@ -6,16 +6,18 @@ Custom `Ctrl+G` prompt drafting flow with message reference context.
 
 **Location:** `~/.pi/agent/extensions/editor-open.ts`
 
-`editor-open` replaces the default `Ctrl+G` external-editor behavior with a structured markdown section format.
+`editor-open` replaces the main prompt's default `Ctrl+G` external-editor behavior with a structured markdown section format. Other focused dialogs and fullscreen transcript search retain their own input handling.
 
 ## Behavior
 
-When you press `Ctrl+G`:
+When you press `Ctrl+G` while the main prompt is focused:
 
 1. The extension reads the latest non-tool message from the current session branch when one is available.
 2. It creates a timestamped section with HTML comment delimiters.
-3. It opens your editor at the prompt section.
+3. It opens your editor at the prompt section, using the existing Neovim wrapper configured by `editor-env` when available.
 4. On save/quit, it extracts only the prompt section and sends it as a new user message.
+
+Only a successful editor exit (status 0) is accepted. A failed launch, nonzero exit (including Neovim's `:cq`), or signal termination submits nothing and leaves the prefilled Pi prompt unchanged.
 
 If an active `/edit` file is set (`edit-prompt-state`), the section is prepended there (after frontmatter when present). Otherwise, a temporary file is used.
 
@@ -40,8 +42,12 @@ Extraction behavior:
 
 ```json
 {
-  "app.editor.external": []
+  "app.editor.external": "ctrl+g"
 }
 ```
 
-This unbinds Pi's built-in `app.editor.external` action from `Ctrl+G`, allowing `editor-open` to handle `Ctrl+G` through its extension shortcut.
+The extension installs a `CustomEditor` that handles `app.editor.external` only when input reaches the main prompt. All other keys delegate to Pi's stock editor, and the working indicator remains embedded in its border.
+
+No extension shortcut is registered, so there is no startup shortcut conflict. Fullscreen search retains its default `Ctrl+G` next-match binding while its search panel has focus. After closing search, `Ctrl+G` opens the reference/prompt flow again.
+
+Run `/reload` after changing the extension or keybindings.

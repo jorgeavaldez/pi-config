@@ -10,5 +10,5 @@
   "tui.input.newLine": ["shift+enter", "ctrl+j"],
   "tui.select.up": ["up", "alt+k"],
   "tui.select.down": ["down", "alt+j"],
-  "app.editor.external": []
+  "app.editor.external": "ctrl+g"
 }

@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.85.0",
+  "lastChangelogVersion": "0.85.1",
   "defaultThinkingLevel": "xhigh",
   "theme": "dark",
   "enabledModels": [
@@ -19,6 +19,7 @@
   ],
   "packages": [
     "npm:@ff-labs/pi-fff",
-    "npm:pi-web-search"
+    "npm:pi-web-search",
+    "npm:pi-agent-browser-native@0.6.10"
   ]
 }
