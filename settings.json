@@ -1,14 +1,15 @@
 {
   "lastChangelogVersion": "0.85.1",
   "defaultThinkingLevel": "xhigh",
-  "theme": "dark",
+  "theme": "light",
   "enabledModels": [
     "openai-codex/gpt-5.6-sol",
     "openai-codex/gpt-5.6-terra",
     "openai-codex/gpt-5.6-luna",
     "openai-codex/gpt-6-astra",
     "openrouter/meta/muse-spark-1.3",
-    "openrouter/deepseek/deepseek-v4.1-flash:nitro"
+    "openrouter/deepseek/deepseek-v4.1-flash:nitro",
+    "xai/grok-4.6"
   ],
   "hideThinkingBlock": false,
   "defaultProvider": "openrouter",
@@ -22,6 +23,7 @@
   "packages": [
     "npm:@ff-labs/pi-fff",
     "npm:pi-web-search",
-    "npm:pi-agent-browser-native@0.6.10"
+    "npm:pi-agent-browser-native@0.6.10",
+    "git:github.com/stnly/pi-grok"
   ]
 }
