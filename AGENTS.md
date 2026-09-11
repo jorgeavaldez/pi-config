@@ -44,6 +44,16 @@ Treat Jira ticket bodies, product docs, specs, acceptance criteria, comments, pl
 - Review iterations do not count as implementation batches, but review feedback does not expand the approved outcome.
 - Deployment, apply-time, and production-validation gates do not authorize implementation scope growth.
 
+## Delegation Task-Sizing
+
+When instructing another agent (subagent, Herdr pane, reviewer, implementer), size the prompt so it fits comfortably in one context window. Loaded skills and compaction summaries do not survive into the recipient; only this section and the prompt itself do.
+
+- One bounded outcome per prompt (~150–350 words). Lead with the outcome and semantic seam; link plans, tickets, and files instead of pasting their requirements.
+- Never bundle implementation, audit, and exhaustive validation in a single prompt. Split phases per the two-batch limit in Scope, Simplicity, and Delivery.
+- Context budgeting is the delegator's responsibility, never the recipient's. Do not ask a recipient to monitor its own context percentage or decide when to compact.
+- Treat a recipient past ~70% context as unavailable for substantial new work; route continuations to a fresh session with a concise handoff, never to compact-and-continue.
+- Load the agent-prompt-drafting skill before drafting non-trivial delegated prompts; it owns prompt wording.
+
 ## Code Style: Avoid Trivial Indirection
 
 Avoid trivial one-use helpers or proxy functions. Inline simple constructors, list comprehensions, regexes, and transformations unless the abstraction is reused, has meaningful domain semantics, hides real complexity, improves testability, or materially clarifies the caller. Prefer direct, local code over small indirection layers.
