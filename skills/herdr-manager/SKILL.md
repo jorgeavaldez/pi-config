@@ -61,7 +61,7 @@ Never rely on remembered pane IDs, tab numbers, status, cwd, or revisions. If mu
 - When a distinct review, investigation, or follow-up agent is justified, place it in the task-owning workspace and keep its ownership separate from the file editor.
 - Keep bookkeeping in the appropriate vault/bookkeeping context.
 - Never send a prompt to a `working` agent unless the user explicitly asks to interrupt.
-- Confirm the target is idle and clear staged input before sending; never append to existing input.
+- Confirm the target is ready (`idle` or `done`), consume any previous result, and clear staged input before sending; never append to existing input.
 
 ### Proportional orchestration
 
@@ -100,7 +100,8 @@ Before delegating:
 3. Confirm any requested workspace creation, reuse, or source-control operation is authorized.
 4. For parallel work, confirm the seams are independent and identify the integration owner and order.
 5. Load `agent-prompt-drafting` and give it the routing facts.
-6. Revalidate the live target, confirm it is idle with a clean input box, then send the prompt.
+6. Revalidate the live target, confirm it is ready (`idle` or `done`) with any previous result consumed and a clean input box, then submit through the agent surface using the `herdr` skill's start/prompt/wait workflow.
+7. Distinguish agent startup, task submission, observed activity, and the actual result. Do not report a task as delegated merely because a fresh agent launched, or as completed merely because a wait returned. Use the `herdr` skill's submission-and-wait operation by default; for separate asynchronous dispatch, confirm activity before waiting on the task.
 
 For plan-based parallel work, pass only the shared plan anchor, sibling seam map, this agent's owned seam, required inputs, and integration owner. Do not duplicate prompt policy or sibling history here.
 
@@ -117,7 +118,7 @@ Queue a follow-up only when all of these are known:
 - self-contained prompt produced with `agent-prompt-drafting`.
 
 Create the watcher in the target task's workspace, preferably by splitting the target pane. Cross-workspace watchers require explicit user approval.
-Wait for the real dependency, not a nearby workstream. Re-check live state before delivery and do not deliver into a working agent.
+Wait for the real dependency, not a nearby workstream. Use the `herdr` skill's lifecycle wait for confirmed submitted work, then inspect the actual result before delivery. A settled or blocked state alone does not satisfy the dependency. Re-check live state before delivery and do not deliver into a working agent.
 
 After queueing, report the target, trigger, watcher, dependency, and session plan. Close temporary watcher panes after delivery or failure reporting.
 
@@ -125,7 +126,7 @@ After queueing, report the target, trigger, watcher, dependency, and session pla
 
 Create an independent review agent only when the user requests one or a concrete risk, ownership boundary, integration seam, or delivery gate justifies it. Implementation having occurred, or review comments having been addressed, is not by itself a reason for another review pass. A bounded follow-up that the task owner has inspected and validated should normally finish with one concise report.
 
-When independent review is justified, run it in a clean tab in the implementation workspace. If implementation is still running, queue review after the implementation pane reaches `done`.
+When independent review is justified, run it in a clean tab in the implementation workspace. If implementation is still running, wait using the `herdr` skill's normal settled-state workflow, then inspect the implementation result before dispatching review. Do not require the `done` badge or treat `blocked`, a timeout, or an idle but never-prompted agent as completed implementation.
 
 After parallel implementation, use one serial reconciliation review when the seams share interfaces or design. Use parallel reviewers only for genuinely independent surfaces.
 

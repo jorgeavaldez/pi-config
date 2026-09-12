@@ -9,6 +9,8 @@ Turn the useful context from the conversation and relevant source material into 
 
 Use simplified technical English. Trust your judgment about organization and detail. Capture the meat of what matters for future understanding without reproducing the conversation or producing an exhaustive change log.
 
+Use the evidence already established in the conversation and only the minimal source material needed to place and accurately write the note. Do not run new diagnostics, browse for additional evidence, or expand the investigation merely to improve the overview. Record unresolved facts as unknowns or follow-up work.
+
 ## Types of overview
 
 Adapt the note to what the user is preserving. Common forms include:

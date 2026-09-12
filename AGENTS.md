@@ -44,6 +44,16 @@ Treat Jira ticket bodies, product docs, specs, acceptance criteria, comments, pl
 - Review iterations do not count as implementation batches, but review feedback does not expand the approved outcome.
 - Deployment, apply-time, and production-validation gates do not authorize implementation scope growth.
 
+## Bounded Evidence Collection
+
+- Start with the smallest query that can distinguish the current hypotheses.
+- Filter and aggregate logs at the source. Keep each result under 8 KB or 200 lines unless the task genuinely requires more.
+- Never read a truncated output file wholesale. Search it with targeted tools such as `rg`, `jq`, or `awk` for the missing evidence.
+- After each diagnostic batch, synthesize what it established before collecting more.
+- After two inconclusive batches, reassess the hypothesis or ask before expanding the investigation.
+- Stop researching once the user's question is supported by sufficient evidence.
+- For web research, run one focused search batch first. Open pages only to resolve a specific uncertainty.
+
 ## Delegation Task-Sizing
 
 When instructing another agent (subagent, Herdr pane, reviewer, implementer), size the prompt so it fits comfortably in one context window. Loaded skills and compaction summaries do not survive into the recipient; only this section and the prompt itself do.
