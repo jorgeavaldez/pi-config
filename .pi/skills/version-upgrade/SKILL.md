@@ -96,8 +96,10 @@ For each extension file, check for:
 When an extension monkey-patches or overrides a pi internal, compare against both the
 old and new versions:
 
-Standalone installs do not include the package's `dist/` source tree. Extract the
-published packages into a temporary directory when implementation comparison is needed:
+npm installs include compiled JavaScript and declarations under `$PI_PACKAGE_ROOT/dist/`;
+inspect the installed implementation there first. Standalone binary installs may not
+include that tree. When it is unavailable, or when comparing with an older version,
+extract the published packages into a temporary directory:
 
 ```bash
 TMP="$(mktemp -d /tmp/pi-upgrade-audit.XXXXXX)"

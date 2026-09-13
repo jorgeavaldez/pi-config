@@ -10,7 +10,7 @@ sessions/
 # Private - skills
 private-skills/
 
-# Dependencies - regenerate with: cd extensions && bun install
+# Dependencies - regenerate with: cd extensions && npm install --ignore-scripts
 extensions/node_modules/
 
 PLAN.md

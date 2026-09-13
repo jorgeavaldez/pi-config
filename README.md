@@ -115,14 +115,14 @@ Enabled by default. Toggle with `/jj-footer` (`on`, `off`, `toggle`, `status`).
 
 ```bash
 jj git clone git@github.com:jorgeavaldez/pi-config.git ~/.pi/agent
-cd ~/.pi/agent/extensions && bun install
+cd ~/.pi/agent/extensions && npm install --ignore-scripts
 ```
 
 Create `~/.pi/agent/auth.json` with your credentials (not tracked).
 
 ## Extension dependency sync
 
-The extension workspace keeps local `devDependencies` on the same pi package versions as the installed `pi` CLI so TypeScript, editor IntelliSense, and `bun run type-check` use matching APIs.
+The extension workspace keeps local `devDependencies` on the same pi package versions as the installed `pi` CLI so TypeScript, editor IntelliSense, and `npm run type-check` use matching APIs.
 
 `peerDependencies` are kept broad (`"*"`) because pi provides those packages at runtime; the pinned local `devDependencies` are just for workspace tooling.
 
@@ -130,7 +130,9 @@ After upgrading pi, resync the extension workspace with:
 
 ```bash
 cd ~/.pi/agent/extensions
-bun run sync-pi-deps
+npm run sync-pi-deps
 ```
 
-That script resolves the installed Pi package from the `pi` binary, updates the local Pi package versions in `extensions/package.json`, and runs `bun install`.
+That script resolves the installed Pi package from the `pi` binary, updates the local Pi and TypeBox versions in `extensions/package.json`, and runs `npm install --ignore-scripts`. Commit `extensions/package-lock.json` with dependency changes; it is the canonical workspace lockfile, including on Termux.
+
+Then check the workspace with `npm run type-check` and `node --test tests/*.test.ts` (Node.js with TypeScript stripping support).

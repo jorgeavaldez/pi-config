@@ -6,7 +6,7 @@
   "license": "ISC",
   "author": "jorge",
   "scripts": {
-    "sync-pi-deps": "node ./scripts/sync-pi-deps.mjs && bun install",
+    "sync-pi-deps": "node ./scripts/sync-pi-deps.mjs && npm install --ignore-scripts",
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
@@ -17,10 +17,10 @@
     "typescript": "^5"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "0.85.1",
-    "@earendil-works/pi-coding-agent": "0.85.1",
-    "@earendil-works/pi-tui": "0.85.1",
-    "typebox": "1.3.7",
+    "@earendil-works/pi-ai": "0.99.1",
+    "@earendil-works/pi-coding-agent": "0.99.1",
+    "@earendil-works/pi-tui": "0.99.1",
+    "typebox": "1.3.27",
     "@types/node": "^25.3.0",
     "typescript": "^5.9.3"
   },
