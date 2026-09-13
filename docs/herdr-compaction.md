@@ -29,16 +29,16 @@ Do not add another lifecycle source to the companion extension. It will not beco
 
 ## Managed integration patch
 
-`extensions/herdr-agent-state.ts` is installed and managed by Herdr. This repository intentionally carries a local patch in that file because Herdr integration v8 does not consume Pi's compaction events.
+`extensions/herdr-agent-state.ts` is installed and managed by Herdr. This repository intentionally carries a local patch in that file because Herdr integration v9 still does not consume Pi's compaction events. Keep v9's session reporting and POSIX/Windows absolute-path handling intact; do not restore a v8 file to recover compaction support.
 
 The patch is marked with a comment referencing [herdrdev/herdr#1853](https://github.com/herdrdev/herdr/issues/1853). It:
 
-1. tracks `compactionActive`;
-2. treats `agentActive || compactionActive` as semantic `working`;
+1. tracks the active attempt's `compactionSignal` as the single compaction state owner;
+2. treats `agentActive || compactionSignal` as semantic `working`;
 3. activates compaction state on `session_before_compact`;
-4. clears it on success, failure, or abort.
+4. clears it on success, failure, or abort, detaching the attempt's abort listener after completion.
 
-Blocked state retains precedence. When automatic compaction occurs during an active agent turn, clearing `compactionActive` leaves the agent `working` until the normal `agent_settled` event. Manual compaction transitions from `working` to `idle`; Herdr derives `done` when that completed state has not been seen.
+Blocked state retains precedence. When automatic compaction occurs during an active agent turn, clearing `compactionSignal` leaves the agent `working` until the normal `agent_settled` event. Manual compaction transitions from `working` to `idle`; Herdr derives `done` when that completed state has not been seen.
 
 ### Overwrite warning
 
@@ -53,7 +53,7 @@ After a Herdr upgrade or Pi integration reinstall:
 
 1. Inspect `extensions/herdr-agent-state.ts` for `session_before_compact` and `session_compact_failed` handlers.
 2. If the bundled integration now handles compaction, use the upstream implementation and remove the obsolete local patch comment.
-3. If it still does not, reconcile and reapply the tracked local patch rather than replacing the entire updated integration file.
+3. If it still does not, reconcile and reapply only the tracked compaction state and handlers on top of the new managed file. Preserve its integration version and updated session/path behavior rather than replacing it with an older file.
 4. Run `/reload` in active Pi sessions.
 5. Repeat the validation below.
 
@@ -102,7 +102,8 @@ After changing either extension:
 
 ```bash
 cd ~/.pi/agent/extensions
-bun run type-check
+npm run type-check
+node --test tests/herdr-agent-state.test.ts
 herdr config check
 ```
 
@@ -114,7 +115,7 @@ Then run `/reload` in Pi and test a session with enough history to compact:
 4. Confirm the agent returns to `idle` or derived `done`, the token clears, and a cancellation notification appears.
 5. Run a successful compaction and confirm the same cleanup plus the completion notification.
 
-The implementation was validated against a real isolated Herdr `0.8.0` server with Pi `0.84.3`, not only a mock socket. The observed cancellation path was:
+The original patch was validated against a real isolated Herdr `0.8.0` server with Pi `0.84.3`, not only a mock socket. The v9 reconciliation for Pi `0.99.1` has socket-backed extension regression coverage for manual/automatic outcomes, aborts, blocked precedence, settlement, and session path reporting; repeat live sidebar validation after reinstall/reload. The observed cancellation path was:
 
 ```text
 idle (state_change_seq 9)
