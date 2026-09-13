@@ -9,9 +9,8 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const REFRESH_MS = 5000;
 const JJ_SEPARATOR = "\x1f";
-const JJ_STATUS_REVSET = 'heads(fork_point(@ | trunk())::@ & (immutable() | (remote_bookmarks() | bookmarks())))::@';
-const JJ_TEMPLATE =
-	`change_id.short(8) ++ "${JJ_SEPARATOR}" ++ bookmarks.map(|b| b.name()).join(",") ++ "${JJ_SEPARATOR}" ++ remote_bookmarks.map(|b| b.name()).join(",") ++ "${JJ_SEPARATOR}" ++ if(description, description.first_line(), "") ++ "${JJ_SEPARATOR}" ++ empty ++ "\\n"`;
+const JJ_STATUS_REVSET = "heads(fork_point(@ | trunk())::@ & (immutable() | (remote_bookmarks() | bookmarks())))::@";
+const JJ_TEMPLATE = `change_id.short(8) ++ "${JJ_SEPARATOR}" ++ bookmarks.map(|b| b.name()).join(",") ++ "${JJ_SEPARATOR}" ++ remote_bookmarks.map(|b| b.name()).join(",") ++ "${JJ_SEPARATOR}" ++ if(description, description.first_line(), "") ++ "${JJ_SEPARATOR}" ++ empty ++ "\\n"`;
 
 type JjRevisionRow = {
 	changeId: string;
@@ -225,7 +224,16 @@ export default function (pi: ExtensionAPI) {
 			try {
 				const { stdout } = await execFileAsync(
 					"jj",
-					["--no-integrate-operation", "log", "--ignore-working-copy", "--no-graph", "-r", JJ_STATUS_REVSET, "-T", JJ_TEMPLATE],
+					[
+						"--no-integrate-operation",
+						"log",
+						"--ignore-working-copy",
+						"--no-graph",
+						"-r",
+						JJ_STATUS_REVSET,
+						"-T",
+						JJ_TEMPLATE,
+					],
 					{ cwd: repoRoot, timeout: 3000, windowsHide: true },
 				);
 				cachedStatus = parseJjStatus(stdout);
@@ -286,6 +294,22 @@ export default function (pi: ExtensionAPI) {
 		ctx.ui.setFooter((tui, theme, footerData) => {
 			requestRender = () => tui.requestRender();
 			const disposeBranchWatcher = footerData.onBranchChange(() => tui.requestRender());
+			let sessionStats:
+				| {
+						sessionManager: ExtensionContext["sessionManager"];
+						sessionId: string;
+						leafId: string | null;
+						entryCount: number;
+						model: ExtensionContext["model"];
+						totalInput: number;
+						totalOutput: number;
+						totalCacheRead: number;
+						totalCacheWrite: number;
+						totalCost: number;
+						latestCacheHitRate: number | undefined;
+						contextUsage: ReturnType<ExtensionContext["getContextUsage"]>;
+				  }
+				| undefined;
 
 			return {
 				dispose() {
@@ -296,36 +320,73 @@ export default function (pi: ExtensionAPI) {
 				render(width: number): string[] {
 					const model = ctx.model;
 
-					// Calculate cumulative usage from ALL session entries (same as built-in footer)
-					let totalInput = 0;
-					let totalOutput = 0;
-					let totalCacheRead = 0;
-					let totalCacheWrite = 0;
-					let totalCost = 0;
-					let latestCacheHitRate: number | undefined;
+					const sessionManager = ctx.sessionManager;
+					const sessionId = sessionManager.getSessionId();
+					const leafId = sessionManager.getLeafId();
+					// ReadonlySessionManager has no getEntryCount(), so use the public snapshot.
+					const entries = sessionManager.getEntries();
+					if (
+						!sessionStats ||
+						sessionStats.sessionManager !== sessionManager ||
+						sessionStats.sessionId !== sessionId ||
+						sessionStats.leafId !== leafId ||
+						sessionStats.entryCount !== entries.length ||
+						sessionStats.model !== model
+					) {
+						let totalInput = 0;
+						let totalOutput = 0;
+						let totalCacheRead = 0;
+						let totalCacheWrite = 0;
+						let totalCost = 0;
+						let latestCacheHitRate: number | undefined;
 
-					for (const entry of ctx.sessionManager.getEntries()) {
-						let usage: Usage | undefined;
-						if (entry.type === "message" && entry.message.role === "assistant") {
-							usage = entry.message.usage;
-							const promptTokens = usage.input + usage.cacheRead + usage.cacheWrite;
-							latestCacheHitRate = promptTokens > 0 ? (usage.cacheRead / promptTokens) * 100 : undefined;
-						} else if (entry.type === "message" && entry.message.role === "toolResult") {
-							usage = entry.message.usage;
-						} else if ((entry.type === "branch_summary" || entry.type === "compaction") && entry.usage) {
-							usage = entry.usage;
+						// Billing includes all branches and standalone usage (e.g. cache warming).
+						for (const entry of entries) {
+							let usage: Usage | undefined;
+							if (entry.type === "usage") {
+								usage = entry.usage;
+							} else if (entry.type === "message" && entry.message.role === "assistant") {
+								usage = entry.message.usage;
+								const promptTokens = usage.input + usage.cacheRead + usage.cacheWrite;
+								latestCacheHitRate = promptTokens > 0 ? (usage.cacheRead / promptTokens) * 100 : undefined;
+							} else if (entry.type === "message" && entry.message.role === "toolResult") {
+								usage = entry.message.usage;
+							} else if (entry.type === "branch_summary" || entry.type === "compaction") {
+								usage = entry.usage;
+							}
+
+							if (!usage) continue;
+							totalInput += usage.input;
+							totalOutput += usage.output;
+							totalCacheRead += usage.cacheRead;
+							totalCacheWrite += usage.cacheWrite;
+							totalCost += usage.cost.total;
 						}
 
-						if (!usage) continue;
-						totalInput += usage.input;
-						totalOutput += usage.output;
-						totalCacheRead += usage.cacheRead;
-						totalCacheWrite += usage.cacheWrite;
-						totalCost += usage.cost.total;
+						sessionStats = {
+							sessionManager,
+							sessionId,
+							leafId,
+							entryCount: entries.length,
+							model,
+							totalInput,
+							totalOutput,
+							totalCacheRead,
+							totalCacheWrite,
+							totalCost,
+							latestCacheHitRate,
+							contextUsage: ctx.getContextUsage(),
+						};
 					}
-
-					// Calculate context usage from ctx (handles compaction correctly)
-					const contextUsage = ctx.getContextUsage();
+					const {
+						totalInput,
+						totalOutput,
+						totalCacheRead,
+						totalCacheWrite,
+						totalCost,
+						latestCacheHitRate,
+						contextUsage,
+					} = sessionStats;
 					const contextWindow = contextUsage?.contextWindow ?? model?.contextWindow ?? 0;
 					const contextPercentValue = contextUsage?.percent ?? 0;
 					const contextPercent = contextUsage?.percent !== null ? contextPercentValue.toFixed(1) : "?";
@@ -359,7 +420,6 @@ export default function (pi: ExtensionAPI) {
 
 					// Add session name on the left and pin session id to the right
 					const sessionName = ctx.sessionManager.getSessionName();
-					const sessionId = ctx.sessionManager.getSessionId();
 					if (sessionName) {
 						headerLeft += theme.fg("dim", ` • ${sessionName}`);
 					}
