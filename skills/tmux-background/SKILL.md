@@ -82,10 +82,12 @@ Primary goals:
 
 ## Primary Launcher
 
+All `scripts/` paths below are relative to the directory containing this `SKILL.md`, not the project working directory. Resolve them to absolute paths before running commands from another directory.
+
 Use the launcher from the skill directory:
 
 ```bash
-/Users/jorge/.pi/agent/skills/tmux-background/scripts/tmux-background.sh \
+scripts/tmux-background.sh \
   --session <descriptive-kebab-name> \
   --cwd <working-directory> \
   --wait <exit|http|port|log|none> \
@@ -169,7 +171,7 @@ Before choosing an approach, infer or ask only what is needed:
 For repeated workflows, create a reusable script under:
 
 ```text
-/Users/jorge/.pi/agent/skills/tmux-background/scripts/
+scripts/
 ```
 
 Reusable scripts should:
