@@ -72,14 +72,14 @@ repurpose it merely because it uses the same repository.
 ## 2. Discover the vault and its task map
 
 Resolve the Obsidian vault at runtime. Prefer an explicit path supplied by the
-user, then a unique `vaultPath` from project/ancestor Pi configuration, then a
-unique `vaultPath` from the active Pi agent configuration directory. Resolve
-relative values against the configuration file that declares them and verify
-that the result is a vault before reading it.
+user, then the current directory or an ancestor clearly identified as a vault
+by `.obsidian/` and its context, then the `OBSIDIAN_VAULT_PATH` environment
+variable read through the shell. Normalize the selected path and verify that it
+exists and is the intended vault before reading it.
 
 Do not embed or infer a personal absolute path, vault name, repository name,
 organization name, repository-parent convention, domain directory, or task
-filename. Do not scan the entire home directory to guess. If configuration is
+filename. Do not scan the entire home directory to guess. If the location is
 missing, invalid, or ambiguous, ask the user for the vault instead.
 
 Read the vault's own agent/context instructions and follow local context-file

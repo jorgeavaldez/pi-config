@@ -4,7 +4,6 @@
 
 - `AGENTS.md` and `APPEND_SYSTEM.md` - global agent instructions
 - `settings.json`, `models.json`, and `keybindings.json` - Pi configuration
-- `obsidian.json` - optional Obsidian vault root
 - `extensions/` - local extensions and their TypeScript workspace
 - `skills/` and `private-skills/` - public and local-only skills
 - `prompts/` - prompt templates
@@ -12,35 +11,23 @@
 
 ## Configuration
 
-### `obsidian.json`
+### Obsidian vault access
 
-The optional Obsidian config stores only the vault root.
-Tools and skills derive obvious paths like `prompts/` from the vault root and otherwise route by path/context.
+`knowledge-base` is a global skill for saving notes, plans, documents, and web references from any working directory.
+`update-plan` remains a separate global skill for refreshing an existing plan wherever that file lives.
 
-Supported locations:
-- global: `~/.pi/agent/obsidian.json`
-- project override: `<cwd>/.pi/obsidian.json`
+Vault-aware skills honor an explicit vault path, then a clearly identified current/ancestor vault, then `OBSIDIAN_VAULT_PATH`.
+If the selected location is missing, invalid, or ambiguous, they ask rather than guess.
+Set the variable in each machine's shell environment using that machine's absolute vault path:
 
-Supported fields:
-
-| Field | Description |
-|-------|-------------|
-| `vaultPath` | Root of the Obsidian vault |
-
-Example:
-
-```json
-{
-  "vaultPath": "~/obsidian/delvaze"
-}
+```sh
+export OBSIDIAN_VAULT_PATH="/absolute/path/to/your/vault"
 ```
 
-Do not add per-directory overrides or domain-specific task paths here.
-The vault layout is intentionally plain:
-
-- prompts derive from `<vaultPath>/prompts`
-- work plans live under `work/plans/` when the work domain is clear
-- personal project plans live under `projects/` or require an explicit path/clarifying question
+This is a custom variable read by the skills, not a built-in Pi setting.
+Start new Pi sessions from that configured shell; `/reload` refreshes skills but does not replace a running process's environment.
+The vault's root `AGENTS.md` owns its layout, linking, metadata, and publishing rules.
+Prompt editing uses temporary files independently of the vault.
 
 ## Extensions
 
