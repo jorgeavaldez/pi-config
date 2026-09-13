@@ -6,23 +6,23 @@ Extension integration for external editing.
 Files:
 - `extensions/editor-env.ts`
 - `extensions/shared/editor-state.ts`
-- `extensions/editor-open.ts` (Ctrl+G flow, preserved)
+- `extensions/editor-open.ts` (main prompt reference + draft buffer)
+- `extensions/shared/editor-ui.ts` (review dialog drafts)
 
 ## Initialization
 At extension load:
-- `editor-env.ts` resolves wrapper path:
-  - `${XDG_CONFIG_HOME:-$HOME/.config}/nvim/bin/pi-nvim-editor`
-- If executable exists:
-  - sets `process.env.EDITOR`
-  - sets `process.env.VISUAL`
-- If missing/unexecutable:
-  - warns and leaves env unchanged
+- `editor-env.ts` searches for `<config-home>/<NVIM_APPNAME or nvim>/bin/pi-nvim-editor` in `XDG_CONFIG_HOME`, Windows `LOCALAPPDATA`, then `~/.config`.
+- When the wrapper exists, it sets `EDITOR` and `VISUAL` to `node <wrapper-path>`, quoting paths with spaces or special characters. A Unix executable bit is not required.
+- Without a wrapper, it retains `EDITOR` or uses `VISUAL`, defaulting to `nvim`, and fills an unset `VISUAL` from `EDITOR`. No warning is emitted.
 
 Important: this is process-wide; spawned subprocesses inherit these env vars.
 
 ## Runtime behavior
-- `openInEditor(...)` remains the shared editor launcher.
-- Ctrl+G editor-open flow remains extension-based and synchronous.
+- `runEditor(...)` asynchronously launches the configured command without a shell. The TUI is suspended while the editor runs and restored afterward.
+- The main prompt handles `app.editor.external` (normally Ctrl+G), opening the previous user-facing message and existing draft in **one temporary buffer**. System/tool text is never reference material.
+- Status 0 permits submission of only the trimmed prompt section, provided the reference is unchanged and the markers are valid. Other exits or rejected content preserve the Pi draft. Temporary files are always cleaned up.
+- Review dialogs show and handle the same configured action. A successful external edit updates the dialog draft; Enter submits it separately.
+- `/edit` and persistent active-file state have been removed.
 
 ## Expected by context
 Inside Neovim `:terminal` with valid `$NVIM`:
@@ -45,12 +45,8 @@ echo "$VISUAL"
 ## Troubleshooting (short)
 
 ### 1) `EDITOR`/`VISUAL` not set to wrapper
-- Wrapper path missing or not executable.
-- Fix perms/path:
-  ```bash
-  chmod +x ~/.config/nvim/bin/pi-nvim-editor
-  ```
-- Restart Pi process after fixing.
+- Check the configured wrapper path and `NVIM_APPNAME`; the wrapper is invoked with Node, not via its shebang.
+- Restart Pi or reload extensions after correcting the path.
 
 ### 2) Ctrl+G opens but flow feels slow
 Likely wrapper polling/probe latency tradeoff (50ms poll, 1s probe cadence).
@@ -63,8 +59,8 @@ Wrapper exit mapping:
 - `2` protocol/runtime error
 
 For extension logic:
-- treat `1` as user cancel
-- treat `2` as error path with notification/retry guidance
+- the main prompt accepts only `0`; all other exits notify and submit nothing
+- review dialogs treat `1` as cancellation and other nonzero exits as failures, preserving the dialog draft
 
 ## When asking an agent to debug
 Ask it to collect these first:

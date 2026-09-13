@@ -1,6 +1,6 @@
 import type { ExtensionCommandContext, KeybindingsManager, Theme } from "@earendil-works/pi-coding-agent";
 import { DynamicBorder, getSelectListTheme, rawKeyHint } from "@earendil-works/pi-coding-agent";
-import { Container, Editor, matchesKey, Spacer, Text, type Focusable, type TUI } from "@earendil-works/pi-tui";
+import { Container, Editor, Spacer, Text, type Focusable, type TUI } from "@earendil-works/pi-tui";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -75,7 +75,7 @@ class ExternalEditableEditor extends Container implements Focusable {
 
 		this.addChild(new Spacer(1));
 		this.addChild(new Text(
-			`${rawKeyHint("enter", "submit")}  ${rawKeyHint("shift+enter", "newline")}  ${rawKeyHint("escape/ctrl+c", "cancel")}  ${rawKeyHint("ctrl+g", "external editor")}`,
+			`${rawKeyHint("enter", "submit")}  ${rawKeyHint("shift+enter", "newline")}  ${rawKeyHint("escape/ctrl+c", "cancel")}  ${rawKeyHint(keybindings.getKeys("app.editor.external").join("/") || "unbound", "external editor")}`,
 			1,
 			0,
 		));
@@ -91,7 +91,7 @@ class ExternalEditableEditor extends Container implements Focusable {
 			return;
 		}
 
-		if (matchesKey(data, "ctrl+g")) {
+		if (this.keybindings.matches(data, "app.editor.external")) {
 			this.editingExternally = true;
 			void editBufferExternally(this.editor.getExpandedText(), this.tui, this.tempFilePrefix)
 				.then((edited) => {

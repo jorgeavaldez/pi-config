@@ -307,17 +307,22 @@ export default function reviewExtension(pi: ExtensionAPI) {
 			const originId = reviewOriginId;
 
 			if (wantsSummary) {
-				const result = await ctx.ui.custom<{ cancelled: boolean; error?: string } | null>((tui, theme, _kb, done) => {
+				const result = await ctx.ui.custom<{ cancelled: boolean } | Error | null>((tui, theme, _kb, done) => {
 					const loader = new BorderedLoader(tui, theme, "Summarizing review branch...");
-					loader.onAbort = () => done(null);
+					// Abort the session's navigation, not just the loader. Keep the dialog
+					// open until navigateTree settles so a retry cannot race it.
+					loader.onAbort = () => ctx.abort();
 
-					ctx.navigateTree(originId, {
-						summarize: true,
-						customInstructions: REVIEW_SUMMARY_PROMPT,
-						replaceInstructions: true,
-					})
-						.then(done)
-						.catch((err) => done({ cancelled: false, error: err instanceof Error ? err.message : String(err) }));
+					ctx
+						.navigateTree(originId, {
+							summarize: true,
+							customInstructions: REVIEW_SUMMARY_PROMPT,
+							replaceInstructions: true,
+						})
+						.then((result) => done(result.cancelled && loader.signal.aborted ? null : result))
+						.catch((error: unknown) =>
+							done(loader.signal.aborted ? null : error instanceof Error ? error : new Error(String(error))),
+						);
 
 					return loader;
 				});
@@ -327,18 +332,18 @@ export default function reviewExtension(pi: ExtensionAPI) {
 					return;
 				}
 
-				if (result.error) {
-					ctx.ui.notify(`Summarization failed: ${result.error}`, "error");
+				if (result instanceof Error) {
+					ctx.ui.notify(`Summarization failed: ${result.message || result.name}`, "error");
+					return;
+				}
+
+				if (result.cancelled) {
+					ctx.ui.notify("Navigation cancelled. Use /end-review to try again.", "info");
 					return;
 				}
 
 				ctx.ui.setWidget("review", undefined);
 				reviewOriginId = undefined;
-
-				if (result.cancelled) {
-					ctx.ui.notify("Navigation cancelled", "info");
-					return;
-				}
 
 				if (!ctx.ui.getEditorText().trim()) {
 					ctx.ui.setEditorText("Review the code review findings");

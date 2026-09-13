@@ -1,190 +1,60 @@
 /**
- * Editor-open Extension
- *
- * Custom Ctrl+G flow that opens an editor section containing:
- * - The last message as reference material
- * - A prompt section for the next user message
- *
- * If /edit has an active file, the section is prepended there.
- * Otherwise, a temporary file is created.
+ * Draft a prompt beside the previous user-facing message in one temporary buffer.
+ * Only the prompt section is submitted; the reference must remain unchanged.
  */
 
 import { CustomEditor, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import {
   createEditorOpenSection,
   extractEditorOpenPrompt,
-  generateTimestamp,
-  insertSectionAfterFrontmatter,
   openInEditor,
   verifyEditorOpenReference,
 } from "./shared/editor-state.js";
 
-/**
- * Get the active edit file from session entries.
- * Uses session history (not module state) to avoid cross-extension module instance issues.
- */
-function getActiveEditFileFromSession(ctx: ExtensionContext): string | undefined {
-  const branch = ctx.sessionManager.getBranch();
-  const stateEntry = branch
-    .filter((e: { type: string; customType?: string }) =>
-      e.type === "custom" && e.customType === "edit-prompt-state"
-    )
-    .pop() as { data?: { activePromptFile?: string } } | undefined;
-
-  return stateEntry?.data?.activePromptFile;
-}
-
-/**
- * Extract user-facing text from a message content payload.
- */
-function extractMessageText(content: unknown): string {
-  if (typeof content === "string") {
-    return content;
-  }
-
-  if (!Array.isArray(content)) {
-    return "";
-  }
-
-  const lines: string[] = [];
-
-  for (const item of content) {
-    if (!item || typeof item !== "object") {
-      continue;
-    }
-
-    const part = item as { type?: string; text?: string };
-
-    if (part.type === "text" && typeof part.text === "string") {
-      lines.push(part.text);
-      continue;
-    }
-
-    if (part.type === "thinking" || part.type === "toolCall") {
-      continue;
-    }
-
-    if (typeof part.text === "string") {
-      lines.push(part.text);
-    }
-  }
-
-  return lines.join("\n").trim();
-}
-
-/**
- * Get the latest message text from the current branch, preferring non-tool messages.
- * Returns null when there are no messages (fresh session).
- */
+/** Read only visible message text, never system instructions or tool output. */
 function getLastMessageContent(ctx: ExtensionContext): string | null {
   const branch = ctx.sessionManager.getBranch();
 
   for (let i = branch.length - 1; i >= 0; i--) {
-    const entry = branch[i] as { type?: string; message?: { role?: string; content?: unknown } } | undefined;
-    if (!entry || entry.type !== "message" || !entry.message) {
-      continue;
-    }
+    const entry = branch[i];
+    const message =
+      entry?.type === "custom_message" && entry.display
+        ? entry
+        : entry?.type === "message" && (entry.message.role === "user" || entry.message.role === "assistant")
+          ? entry.message
+          : undefined;
+    if (!message) continue;
 
-    const role = entry.message.role;
-    if (role === "toolResult" || role === "bashExecution") {
-      continue;
-    }
-
-    const text = extractMessageText(entry.message.content);
-    if (text) {
-      return text;
-    }
+    const text =
+      typeof message.content === "string"
+        ? message.content
+        : message.content
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n");
+    if (text.trim()) return text.trim();
   }
 
   return null;
 }
 
-/**
- * Create a temp file for editor-open flow.
- */
-function createTempFile(reference: string | null, timestamp: string, prefillPrompt: string): {
-  tempFile: string;
-  cursorLine: number;
-} {
-  const tempDir = mkdtempSync(join(tmpdir(), "pi-editor-open-"));
-  const tempFile = join(tempDir, "prompt.md");
-
-  const content = createEditorOpenSection(reference, timestamp, prefillPrompt) + "\n";
-  writeFileSync(tempFile, content, "utf-8");
-
-  if (reference === null) {
-    // No reference block: <!-- PROMPT --> on line 1, cursor on line 2
-    const cursorLine = 2;
-    return { tempFile, cursorLine };
-  }
-
-  const referenceLines = reference.split("\n").length;
-  const cursorLine = 1 + referenceLines + 2;
-
-  return { tempFile, cursorLine };
-}
-
-/**
- * Prepend a reference/prompt section at the top (after frontmatter when present).
- */
-function prependSectionToFile(
-  filepath: string,
-  reference: string | null,
-  timestamp: string,
-  prefillPrompt: string
-): number {
-  const section = createEditorOpenSection(reference, timestamp, prefillPrompt);
-  // When no reference, section is just: PROMPT marker + prompt + END marker (3 lines)
-  // Cursor goes to line 2 (the prompt line) relative to section start
-  const cursorOffsetInSection = reference === null ? 1 : (reference.split("\n").length + 2);
-
-  if (!existsSync(filepath)) {
-    writeFileSync(filepath, section + "\n\n", "utf-8");
-    return 1 + cursorOffsetInSection;
-  }
-
-  const sectionStart = insertSectionAfterFrontmatter(filepath, section);
-  return sectionStart + cursorOffsetInSection;
-}
-
-function cleanupTempFile(tempFile: string): void {
-  try {
-    rmSync(dirname(tempFile), { recursive: true, force: true });
-  } catch {
-    // Ignore cleanup errors
-  }
-}
-
 export default function editorOpenExtension(pi: ExtensionAPI) {
   pi.on("session_start", (_event, ctx) => {
-    if (ctx.mode !== "tui") {
-      return;
-    }
+    if (ctx.mode !== "tui") return;
 
     const openPrompt = async () => {
-      const timestamp = generateTimestamp();
+      const timestamp = new Date().toISOString().slice(0, 19);
       const reference = getLastMessageContent(ctx);
       const prefillPrompt = ctx.ui.getEditorText();
-      const activeEditFile = getActiveEditFileFromSession(ctx);
-
-      let filepath: string;
-      let cursorLine: number;
-      let usingTempFile = false;
-
-      if (activeEditFile) {
-        filepath = activeEditFile;
-        cursorLine = prependSectionToFile(filepath, reference, timestamp, prefillPrompt);
-      } else {
-        const temp = createTempFile(reference, timestamp, prefillPrompt);
-        filepath = temp.tempFile;
-        cursorLine = temp.cursorLine;
-        usingTempFile = true;
-      }
+      const tempDir = mkdtempSync(join(tmpdir(), "pi-editor-open-"));
+      const filepath = join(tempDir, "prompt.md");
+      const cursorLine = reference === null ? 2 : reference.split("\n").length + 3;
 
       try {
+        writeFileSync(filepath, createEditorOpenSection(reference, timestamp, prefillPrompt) + "\n", "utf-8");
         if (!(await openInEditor(filepath, cursorLine, ctx))) {
           ctx.ui.notify("Editor cancelled or failed; nothing submitted", "warning");
           return;
@@ -212,25 +82,24 @@ export default function editorOpenExtension(pi: ExtensionAPI) {
         ctx.ui.setEditorText("");
         pi.sendUserMessage(prompt);
       } finally {
-        if (usingTempFile) {
-          cleanupTempFile(filepath);
-        }
+        rmSync(tempDir, { recursive: true, force: true });
       }
     };
 
-    ctx.ui.setEditorComponent((tui, theme, keybindings) =>
-      new (class extends CustomEditor {
-        override handleInput(data: string): void {
-          // Search and other focused UI handle input before it reaches this editor.
-          if (keybindings.matches(data, "app.editor.external")) {
-            void openPrompt().catch((error: unknown) => {
-              ctx.ui.notify(`Editor-open failed: ${error instanceof Error ? error.message : String(error)}`, "error");
-            });
-            return;
+    ctx.ui.setEditorComponent(
+      (tui, theme, keybindings) =>
+        new (class extends CustomEditor {
+          override handleInput(data: string): void {
+            // Search and other focused UI handle input before it reaches this editor.
+            if (keybindings.matches(data, "app.editor.external")) {
+              void openPrompt().catch((error: unknown) => {
+                ctx.ui.notify(`Editor-open failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+              });
+              return;
+            }
+            super.handleInput(data);
           }
-          super.handleInput(data);
-        }
-      })(tui, theme, keybindings, { embedWorkingStatus: true })
+        })(tui, theme, keybindings, { embedWorkingStatus: true }),
     );
   });
 }

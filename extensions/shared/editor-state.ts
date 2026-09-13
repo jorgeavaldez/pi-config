@@ -1,41 +1,8 @@
-/**
- * Shared Editor State and Utilities
- *
- * Provides shared state and utilities for extensions that work with
- * external editors and prompt files.
- */
+/** External editor launching and reference/prompt section utilities. */
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { TUI, Component } from "@earendil-works/pi-tui";
 import { spawn, spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
-
-// =============================================================================
-// Module State
-// =============================================================================
-
-let activeEditFile: string | undefined;
-
-/**
- * Get the currently active edit file path (set by /edit command).
- */
-export function getActiveEditFile(): string | undefined {
-  return activeEditFile;
-}
-
-/**
- * Set the active edit file path.
- */
-export function setActiveEditFile(filepath: string): void {
-  activeEditFile = filepath;
-}
-
-/**
- * Clear the active edit file (used on session changes).
- */
-export function clearActiveEditFile(): void {
-  activeEditFile = undefined;
-}
 
 // =============================================================================
 // Editor Utilities
@@ -126,88 +93,13 @@ export async function openInEditor(
 }
 
 // =============================================================================
-// Timestamp Utilities
-// =============================================================================
-
-/**
- * Generate ISO timestamp for section markers.
- * Format: YYYY-MM-DDTHH:MM:SS (no milliseconds, no timezone)
- */
-export function generateTimestamp(): string {
-  return new Date().toISOString().slice(0, 19);
-}
-
-// =============================================================================
-// Frontmatter & Section Utilities
-// =============================================================================
-
-/**
- * Find the line index (0-based) of the frontmatter closing delimiter (second '---').
- * Returns -1 if no frontmatter is found.
- */
-export function findFrontmatterEndLine(lines: string[]): number {
-  let dashCount = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i]?.trim() === "---") {
-      dashCount++;
-      if (dashCount === 2) return i;
-    }
-  }
-  return -1;
-}
-
-/**
- * Insert a section string into an existing file, after frontmatter if present.
- * Returns the 1-indexed line number where the section starts.
- * Caller must ensure the file exists.
- */
-export function insertSectionAfterFrontmatter(filepath: string, section: string): number {
-  const content = readFileSync(filepath, "utf-8");
-  const lines = content.split("\n");
-  const sectionLines = section.split("\n");
-  const frontmatterEndLine = findFrontmatterEndLine(lines);
-
-  if (frontmatterEndLine === -1) {
-    const newContent = `${section}\n\n${content}`;
-    writeFileSync(filepath, newContent, "utf-8");
-    return 1;
-  }
-
-  const before = lines.slice(0, frontmatterEndLine + 1);
-  const after = lines.slice(frontmatterEndLine + 1);
-  const newLines = [...before, "", ...sectionLines, "", ...after];
-  writeFileSync(filepath, newLines.join("\n"), "utf-8");
-
-  // frontmatterEndLine is 0-indexed; +1 for 1-indexing, +1 for blank line, +1 for first section line
-  return frontmatterEndLine + 3;
-}
-
-/**
- * Extract trimmed text between two marker strings in content.
- * Returns null if either marker is missing, end comes before start, or result is empty.
- */
-export function extractBetweenMarkers(content: string, startMarker: string, endMarker: string): string | null {
-  const startIndex = content.indexOf(startMarker);
-  if (startIndex === -1) return null;
-
-  const endIndex = content.indexOf(endMarker);
-  if (endIndex === -1) return null;
-
-  const contentStart = startIndex + startMarker.length;
-  if (endIndex <= contentStart) return null;
-
-  const text = content.slice(contentStart, endIndex).trim();
-  return text || null;
-}
-
-// =============================================================================
 // Editor-open Section Utilities
 // =============================================================================
 
 /**
  * Build reference/prompt section markers for a given timestamp.
  */
-export function getEditorOpenMarkers(timestamp: string) {
+function getEditorOpenMarkers(timestamp: string) {
   return {
     referenceStart: `<!-- REFERENCE: ${timestamp} -->`,
     promptStart: `<!-- PROMPT: ${timestamp} -->`,
@@ -242,7 +134,14 @@ ${sectionEnd}`;
  */
 export function extractEditorOpenPrompt(content: string, timestamp: string): string | null {
   const { promptStart, sectionEnd } = getEditorOpenMarkers(timestamp);
-  return extractBetweenMarkers(content, promptStart, sectionEnd);
+  const startIndex = content.indexOf(promptStart);
+  if (startIndex === -1) return null;
+
+  const endIndex = content.indexOf(sectionEnd);
+  const contentStart = startIndex + promptStart.length;
+  if (endIndex <= contentStart) return null;
+
+  return content.slice(contentStart, endIndex).trim() || null;
 }
 
 /**

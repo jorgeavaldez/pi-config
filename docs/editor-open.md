@@ -6,26 +6,26 @@ Custom `Ctrl+G` prompt drafting flow with message reference context.
 
 **Location:** `~/.pi/agent/extensions/editor-open.ts`
 
-`editor-open` replaces the main prompt's default `Ctrl+G` external-editor behavior with a structured markdown section format. Other focused dialogs and fullscreen transcript search retain their own input handling.
+`editor-open` handles the main prompt's configured `app.editor.external` action (normally `Ctrl+G`) with a structured markdown section format. Other focused dialogs and fullscreen transcript search retain their own input handling. Review dialogs also honor this action, editing their own draft rather than sending a message.
 
 ## Behavior
 
 When you press `Ctrl+G` while the main prompt is focused:
 
-1. The extension reads the latest non-tool message from the current session branch when one is available.
-2. It creates a timestamped section with HTML comment delimiters.
-3. It opens your editor at the prompt section, using the existing Neovim wrapper configured by `editor-env` when available.
-4. On save/quit, it extracts only the prompt section and sends it as a new user message.
+1. The extension reads the previous user-facing message from the current branch: visible user/assistant text or a displayed custom message. System instructions, tool output, thinking, and tool calls are never used as reference text.
+2. It creates one temporary markdown buffer containing the reference and a timestamped prompt section prefilled with the existing Pi draft. A fresh session has only the prompt section.
+3. It opens your editor at the prompt section, using the Neovim RPC wrapper configured by `editor-env` when available (otherwise the retained editor preference, defaulting to local Neovim).
+4. On a successful editor exit, it checks the reference is unchanged, extracts only the prompt section, clears the Pi draft, and sends the prompt as a new user message.
 
 Only a successful editor exit (status 0) is accepted. A failed launch, nonzero exit (including Neovim's `:cq`), or signal termination submits nothing and leaves the prefilled Pi prompt unchanged.
 
-If an active `/edit` file is set (`edit-prompt-state`), the section is prepended there (after frontmatter when present). Otherwise, a temporary file is used.
+The reference and prompt remain in the **same buffer**. A changed reference, missing delimiters, or an empty prompt submits nothing and preserves the Pi draft. The temporary directory is removed after success, cancellation, or failure. `/edit` and persistent prompt-file selection are no longer provided; historic session file selections are ignored.
 
 ## Delimiter Format
 
 ```markdown
 <!-- REFERENCE: 2026-02-09T12:00:00 -->
-(last message content)
+(previous user-facing message)
 <!-- PROMPT: 2026-02-09T12:00:00 -->
 (your prompt here)
 <!-- /REFERENCE: 2026-02-09T12:00:00 -->
@@ -38,7 +38,7 @@ Extraction behavior:
 
 ## Keybinding
 
-`keybindings.json` sets:
+The usual binding in `keybindings.json` is:
 
 ```json
 {

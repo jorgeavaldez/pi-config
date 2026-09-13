@@ -52,36 +52,24 @@ Provides Exa-backed `websearch` and `webfetch` tools for real-time web search an
 
 Sends a desktop notification when an agent run fully settles outside Herdr. It also warns when the agent requests a potentially dangerous shell command.
 
-### edit-prompt
-
-Opens your editor to edit prompt files under `<vaultPath>/prompts` when `obsidian.json` is configured, otherwise `~/.pi/prompts`.
-
-**Usage:** `/edit` - First call opens file selector, subsequent calls reuse the file.
-
-Two modes in file selector (toggle with `Ctrl+R`):
-- **New File** (default): Type filename to create/open
-- **Search**: Fuzzy search existing files (requires `fd`)
-
-Uses `$EDITOR` → `$VISUAL` → nvim → vim → vi fallback chain.
-
 ### editor-open
 
 Adds a custom `Ctrl+G` workflow for drafting prompts in your editor with reference context.
 
 Behavior:
-- Includes the latest non-tool message as a reference section when one is available
-- Adds a separate prompt section delimited by HTML comments
-- Extracts and sends only the prompt section after save/quit
-- If `/edit` has set an active file, prepends the section there (after frontmatter)
-- Otherwise uses a temporary file
+- Opens the previous user-facing message and existing prompt draft in the same temporary buffer
+- Uses only visible user/assistant or displayed custom-message text, never system instructions or tool output
+- Protects the reference and sends only the trimmed prompt section after a successful editor exit
+- Cancellation, failure, a changed reference, or an empty prompt leaves the Pi draft unchanged
+- Removes the temporary buffer file after editing; `/edit` is no longer provided
 
-`keybindings.json` sets `app.editor.external` to `[]`, so `Ctrl+G` is handled by this extension instead of Pi's built-in external editor action.
+The extension handles the configured `app.editor.external` action (normally `Ctrl+G`) while the main prompt has focus. See [`docs/editor-open.md`](docs/editor-open.md).
 
 ### pi ↔ nvim rpc flow
 
-`editor-env` sets `EDITOR`/`VISUAL` to `~/.config/nvim/bin/pi-nvim-editor` when available.
+`editor-env` sets `EDITOR`/`VISUAL` to invoke the available `pi-nvim-editor` wrapper through Node; without it, the configured editor is retained, defaulting to Neovim.
 
-This gives `/edit` and `Ctrl+G` a deterministic host-aware external edit path:
+This gives the main prompt and review dialogs a host-aware external edit path:
 - if pi runs inside nvim `:terminal`, edits open in the host nvim
 - otherwise it falls back to local nvim
 
@@ -101,7 +89,8 @@ Interactive code review for a jj revset.
 
 - `/review` — opens an editor prefilled with `trunk()..@`, then optionally collects review guidance
 - `/review <revset>` — uses the supplied revset as the editor default
-- `/end-review` — completes an isolated review, optionally summarizes it, and returns to the original session position
+- Review dialogs show and honor the configured `app.editor.external` action; external edits update the dialog draft without submitting it
+- `/end-review` — completes an isolated review, optionally summarizes it, and returns to the original session position; cancelling the loader aborts and awaits navigation, retaining review state for retry
 
 When the current session has messages, `/review` can use an empty session-tree branch for isolation. Requires a jj repository.
 
