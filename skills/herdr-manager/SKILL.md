@@ -91,6 +91,10 @@ Otherwise, context budgeting is the manager's responsibility. Pi recipients do n
 
 Do not assign substantial new work to a session near 50% context. Treat 70% as unavailable for further substantive work, not as a cue to compact and continue.
 
+### In-flight monitoring
+
+For tasks expected to run long, poll the child's status and context pressure while it works; do not dispatch and walk away. If context climbs past ~50% with no working-copy deltas or verification output — typically a read/probe spiral — stop the child early, preserve any deltas, and re-dispatch a smaller seam with a tighter handoff. Never coax a spiraling session forward.
+
 ## Delegation
 
 Before delegating:
