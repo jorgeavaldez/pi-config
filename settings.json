@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "0.85.1",
   "defaultThinkingLevel": "high",
-  "theme": "light",
+  "theme": "dark",
   "enabledModels": [
     "openai-codex/gpt-5.6-sol",
     "openai-codex/gpt-5.6-terra",

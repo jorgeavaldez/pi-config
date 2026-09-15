@@ -16,6 +16,14 @@ Only perform git operations when the user EXPLICITLY requests them.
 - Do not use `git` for source-control actions unless the user explicitly requests `git`.
 - When explaining workflows, prefer `jj` terminology and commands.
 
+### Conflict-only resolution
+
+- Preserve current working-copy content outside conflict regions, including changes jj already merged automatically. Do not rebuild the files from one side.
+- If diff-style markers are confusing, inspect snapshot-style output with `jj --config ui.conflict-marker-style=snapshot file show -r @ <path>`.
+- To inspect pre-rebase edits, use the original commit hash shown in the conflict labels; the change ID may now select the conflicted rebased revision.
+- Edit conflict regions directly. Verify the final diff preserves both sides' intended changes, no conflicts remain in the working-copy revision, and the parent commit hash is unchanged.
+- Leave the resolution in the current working-copy revision for review. Do not squash or rewrite parent revisions unless explicitly requested.
+
 ## Source Interpretation and Clarifying Questions
 
 Treat Jira ticket bodies, product docs, specs, acceptance criteria, comments, plans, examples, and similar internally authored artifacts as context and evidence—not as binding contracts or guaranteed-correct scope and decomposition.
@@ -53,6 +61,25 @@ Treat Jira ticket bodies, product docs, specs, acceptance criteria, comments, pl
 - After two inconclusive batches, reassess the hypothesis or ask before expanding the investigation.
 - Stop researching once the user's question is supported by sufficient evidence.
 - For web research, run one focused search batch first. Open pages only to resolve a specific uncertainty.
+
+## Web Research and Browser Use
+
+- Choose by the information needed, not by the word "browse." Use an available web-search tool for discovery and current external facts; prefer primary sources and stop when the question is supported.
+- For a known public URL, prefer an available fetch/text-retrieval tool. If none is available, use `agent_browser` with `args: ["read", "<url>"]`, which can fetch text without launching Chromium. Do not open a browser merely to read documentation, articles, or raw source files.
+- Launch a browser for interaction, authenticated/profile content, rendered DOM or visual inspection, or when lightweight retrieval demonstrably cannot provide the needed content. `open → snapshot → interact` applies to those browser workflows, not ordinary web research.
+- Prefer native `agent_browser` over shell-driven browser automation when a browser is actually needed. That preference does not displace web search or lightweight URL fetching.
+
+## Screenshot Review: Automatic Contact Sheets
+
+- For multi-screen visual review, capture the known pages, states, or viewports in one safe `agent_browser` call/batch. Use distinct, descriptive output paths such as `home-desktop.png` and `home-mobile.png`; filenames and image dimensions become panel labels. Avoid capture → inspect → capture → inspect when the captures do not depend on visual feedback.
+- For known linear capture sequences (open, resize, wait, screenshot), prefer `args: ["batch", "--bail"]` with a JSON array of argv arrays encoded as the `stdin` string, rather than `script`. Reserve `script` for actual conditional or looping orchestration; it uses a separate isolated browser session.
+- If a capture script fails, inspect the failure and retry the independent captures together in an ordinary batch, re-establishing the page and viewport there. Do not fall back to separate screenshot calls unless later captures genuinely require new visual feedback; separate calls cannot produce a shared contact sheet.
+- The local `extensions/browser-images.ts` hook automatically composes two or more distinct, verified saved screenshots from the same result into a **contact sheet** (screenshot montage). It returns the sheet as the only inline image, reports its saved path and `details.contactSheet`, and preserves originals, existing artifact metadata, and browser success/error status. It also handles saved screenshots omitted from upstream inline attachments.
+- Inspect the automatically returned sheet first. Do not write composition commands, search for fonts, install image tools, or separately `read` the same sheet. The hook owns composition; agents only need to batch captures.
+- Grouping is per call/batch, not across calls. Keep batches small enough for readable comparisons. For long pages, capture relevant sections instead of shrinking an entire page into an illegible thumbnail. One composite is not automatically cheaper; dimensions and detail still matter.
+- Single screenshots remain deferred. Use `read` immediately when a screenshot must determine the next interaction or the task concerns one screen. After reviewing a sheet, read only the originals or crops needed to resolve a specific visual question.
+- Check artifact verification and browser errors independently: a contact sheet can contain the successful captures from a partially failed batch and is not proof that every step passed. If composition fails, the hook reports a warning and leaves originals deferred; read the needed originals rather than spending time building a replacement image workflow.
+- Evidence-only screenshots do not require a visual correctness claim. Saving a file proves capture, not visual correctness. Keep originals available for detail inspection and handoff.
 
 ## Delegation Task-Sizing
 
