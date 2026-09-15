@@ -1,323 +1,126 @@
 ---
 name: agent-prompt-drafting
-description: Draft explicit, context-bounded prompts for other AI agents. Use whenever instructing, spawning, delegating to, queueing work for, following up with, or messaging another agent, especially through Herdr. Requires clear mode, permissions, routing, approval gates, and task sizing so agents can finish without compaction.
+description: Draft concise, context-bounded prompts for another agent. Use when Jorge asks for an investigation, planning, review, implementation, or follow-up handoff. Preserve his scope and context, include relevant existing artifacts, and return a complete usable prompt.
 ---
 
 # Agent Prompt Drafting
 
-Use this skill every time you write instructions for another AI agent.
-This includes Herdr panes, Pi agents, review agents, implementation agents, watcher-delivered follow-ups, and queued prompts.
+Write the prompt for the work Jorge actually requested.
+This skill owns prompt wording, not workspace setup or agent startup.
+Return the prompt in chat unless Jorge requests another destination.
 
-For Herdr coordination, use this skill with `herdr-manager`.
-Herdr manager owns routing and live pane safety.
-This skill owns task sizing and prompt wording.
+## Understand the request
 
-## Primary goal: finish without compaction
+Identify the intended outcome, the kind of work requested, and the context the recipient needs.
+Use Jorge's words, corrections, and approved decisions to interpret tickets, plans, and other source material.
+An internal document is context, not automatically a complete or correct specification.
+If different interpretations would materially change the work, ask before drafting.
 
-Treat context-window pressure as a correctness risk.
-A prompt is not successful if it causes the recipient to compact, lose requirements, or stop early.
+Read enough to carry the task accurately; leave the requested investigation to its recipient.
+Preserve additional guidance Jorge supplies, including what he wants simplified or left out.
+If the conversation or artifact he references is outside this session, read the relevant part rather than assuming its contents.
 
-Default to one bounded task packet that the agent can complete in one context window.
-Keep the task inline and self-contained, but do not reproduce context the agent can discover from the repository.
+## Keep the handoff small and complete
 
-Context budgeting is the coordinator's responsibility. Do not ask a recipient to monitor a context percentage, prevent automatic compaction, or decide when its own session is too full. Size and decompose the work before dispatch, and route later substantial seams to fresh sessions rather than relying on compaction.
+Aim for one bounded question or independently useful implementation outcome that fits a focused session.
+If the request bundles materially different outcomes, suggest a smaller first outcome for Jorge to choose.
+Do not make a recipient responsible for watching its own context usage.
 
-A short prompt is not an underspecified prompt.
-State the outcome, relevant issues, constraints, and stop condition, then trust the agent to choose the mechanics.
+Usually 150–350 words is enough; use more only when the actual task needs it.
+Include:
 
-## Task-sizing gate
+- The goal and whether this is investigation, planning, review, or implementation.
+- The approved scope and important boundaries.
+- The task/ticket and directly relevant existing artifacts.
+- Known findings or decisions that the recipient would otherwise have to rediscover.
+- The actual workspace and revision when known, distinguishing them from where earlier investigation happened.
+- What may be edited and what source-control or external actions Jorge authorized.
+- The requested result and any concrete condition that requires clarification.
 
-Before drafting or sending a technical prompt, assess whether it is likely to fit comfortably in one context window.
+These are information needs, not mandatory headings or a form to fill out.
+Describe outcomes and meaningful constraints rather than prescribing every file, command, or internal step.
+Trust the recipient to inspect current source and choose the smallest correct implementation.
 
-Warning signs include:
+## Existing artifacts and source anchors
 
-- more than three independent issue clusters;
-- changes spanning several architectural layers or languages;
-- review, implementation, and exhaustive verification bundled together;
-- a long list of exact changes such as “change X to Y, rewrite Z, migrate A, and retest B”;
-- whole-diff audits plus fixes;
-- large behavior matrices or many test suites;
-- migrations, schemas, workflows, provider integrations, or failure recovery combined in one task;
-- planning that must reconcile several independent entry-point families such as UI, API, agents, workflows, and infrastructure;
-- an existing recipient already near or past 50% context usage.
-
-When these signs appear, **do not draft or send the full prompt**. If delegation of the overall outcome is already authorized, decompose it into bounded task-local sessions under one integration owner without adding approval ceremony. Ask Jorge only when decomposition changes approved scope, ownership, workspace, source-control permissions, external actions, or another binding constraint.
-
-For broad planning or investigation, do not make one nominal planner inspect every independent surface. Route non-overlapping read-only evidence questions to fresh sessions and have the integration owner synthesize them. A single owner does not require a single agent session.
-
-An implementation phase may contain at most two batches. Each batch must fit one session and produce an independently reviewable, mergeable change. If a third batch is needed, redesign the phase instead of extending the sequence.
-
-A ticket, approved plan, named batch, or shared canonical service is not proof that the work fits one session. Size the actual delivery boundaries: treat independently mergeable caller migrations as separate batch candidates even when they share a contract, and treat an unavailable validation environment as a gate rather than permission to add setup work.
-
-Choose batches based on dependencies, for example:
-
-1. implement one related correctness seam with focused tests;
-2. implement the next independent seam with focused tests.
-
-Tests-first is a suggestion, not a fixed rule.
-Use it when characterization reduces implementation risk.
-Combine tests with implementation when they are small and inseparable.
-
-The batching proposal should be short:
+Include a relevant plan when it exists, even if the ticket is self-contained.
+For a local Obsidian plan, provide both a wikilink for Jorge and an absolute path the agent can read.
+Identify the relevant sections, including shared checks or exclusions when they matter.
+For example:
 
 ```text
-This phase is too large. Suggested redesign:
-1. <bounded, mergeable outcome>
-2. <bounded, mergeable outcome>
-
-Want me to send batch 1 first?
+Plan: [[work/plans/example#3. History and results|History and results plan]]
+File: /Users/jorge/obsidian/delvaze/work/plans/example.md
+Read §3 for this change and §5 for its checks.
 ```
 
-After approval, draft or send one batch at a time unless Jorge explicitly asks to queue multiple batches.
-If the task cannot be made safely concise without losing requirements, split it rather than expanding the prompt.
+Use a small number of code references as orientation, not an exhaustive file allowlist.
+Pass findings and decisions, not the entire investigation transcript.
+Distinguish source inspection, runtime verification, inference, and remaining uncertainty.
+Refresh stale facts such as the destination, revision, and whether implementation has started.
 
-## Describe outcomes, not procedures or file inventories
+Private vault paths belong in the handoff, not in shared Jira or PR content.
+When the recipient runs on another host, resolve a readable artifact location rather than assuming a local path exists there.
+A saved plan is useful context, not a prerequisite: a clear approved outcome supplied in conversation can be handed off directly.
 
-For broad objectives such as review, investigation, planning, or copy revision, state the intended outcome and semantic boundary, then trust the receiving agent to inspect the actual state and choose the smallest correct file surface, procedure, and validation.
+## Investigation or planning
 
-When Jorge asks to delegate a ticket or request to a task manager, planner, or investigator, the receiving agent owns investigation of the current state, reconciliation of source material, solution selection, and task decomposition. The coordinator owns routing, permissions, source anchors, the requested outcome, and constraints Jorge actually approved. Read only enough to route and bound the delegation safely; do not pre-investigate the code or pre-solve the task.
+Ask for concise, simplified technical English, using short bullets:
 
-Treat Jira ticket bodies, product docs, specs, acceptance criteria, comments, plans, examples, and similar internally authored artifacts as contextual evidence unless Jorge explicitly adopted a specific scope or design decision. Do not preserve their wording, decomposition, or proposed mechanisms one-to-one merely because they are documented. A delegated prompt must communicate the real user outcome and leave the receiving agent responsible for reconciling related sources with current product behavior.
+- What exists today.
+- What is missing for the requested outcome.
+- What can be done with small changes.
+- What would require larger work.
+- What is in scope and out of scope.
+- Any real question Jorge needs to answer.
 
-Pass behavioral acceptance criteria or technical mechanisms as binding only when Jorge explicitly approved them, a verified public or runtime contract currently relies on them, or a genuine interoperability, security, or legal requirement demands them. If source wording is ambiguous, strange, conflicting, too broad, overscoped, or supports materially different outcomes, ask Jorge before drafting or dispatching the prompt rather than making the receiving agent guess.
+Adapt those bullets to the actual question rather than requiring an exhaustive report.
+Separate Jorge's settled scope from recommendations that still need his decision.
+For planning, add a short proposed implementation order and meaningful dependencies when needed.
+The result belongs in the conversation so Jorge can discuss and refine it.
+Durable documents and ticket changes are separate requests.
 
-Do not broaden a request merely because adjacent artifacts are technically related, externally visible, or present in the same diff. Conversely, do not recover from ambiguity by replacing the outcome with an exhaustive filename allowlist or exclusion catalog. Exact paths are appropriate when Jorge named them, an approved plan or finding anchors them, or operational or security isolation requires a hard boundary; otherwise use paths only as orientation.
-
-If two reasonable interpretations would materially change the outcome, ask Jorge rather than choosing the broader or more rigid interpretation.
-
-For example, prefer:
+Example:
 
 ```text
-Review the current working-copy change for correctness, focusing on dispatch recovery and outcome consistency.
-Report actionable findings with file references and a verdict.
+Investigate <outcome> in <repository>. Read-only; leave files and source control unchanged.
+Context: <ticket/docs and Jorge's additional guidance>.
+Explain what already exists, what is missing, and the smallest changes needed.
+Separate that from larger work outside <approved boundary>.
+Use concise, simplified technical-English bullets, with concrete source references where useful.
+Call out any scope decision you need from me.
 ```
 
-Do not expand that into instructions to read every file, enumerate every helper, run a long command matrix, trace every branch, and produce multiple inventories unless Jorge specifically requests those artifacts.
+## Implementation
 
-For precise implementation tasks, describe each issue and the required invariant.
-Avoid prescribing exact files or internal mechanics unless that boundary or mechanism is itself an approved requirement.
+State the approved outcome directly and include existing plan sections when available.
+Summarize only the current-state facts and boundaries needed to begin.
+Include focused tests and checks as part of delivering the behavior, not as a separate process.
+State actual edit permissions; implementation does not itself authorize commits, bookmarks, pushes, or opening a PR.
 
-## Minimal context rules
-
-Include only context the recipient cannot reliably infer:
-
-- the task and business outcome;
-- the exact workspace, cwd, revision, pane, and session/tree plan when relevant;
-- one plan, PR, ticket, or artifact anchor when useful;
-- the issue descriptions or decisions that must cross agent boundaries;
-- mode, edit permissions, source-control permissions, and approval gate;
-- the expected artifact or concise completion report.
-
-Keep business context to one to three short bullets.
-Default to roughly 150–350 words for a single task packet.
-Exceed that only when the exact issue list itself requires it and the task still fits one context.
-
-Omit by default:
-
-- review procedures and generic coding workflows;
-- exhaustive test/check command lists;
-- full prior-agent transcripts or chronological history;
-- repeated repository instructions already available to the agent;
-- detailed changed-surface inventories the agent can derive;
-- speculative edge cases unrelated to the named issue;
-- unrelated sibling work, even as negative scope;
-- repeated explanations of the same invariant;
-- mandatory report sections that do not affect the decision.
-
-Pass findings, not the investigation that produced them.
-When handing off a specific finding, include its existing file reference and a short issue description instead of copied review prose; do not turn those references into a broader file prescription.
-
-## Mandatory prompt fields
-
-Every delegated prompt must still make these points explicit, usually in one line each:
-
-- **Target:** workspace/cwd/revision and session plan when relevant.
-- **Mode:** planning, investigation, review, implementation, or bookkeeping.
-- **Edits:** the semantic edit boundary, or “do not modify files”; use exact paths only when the boundary genuinely requires them.
-- **Source control:** whether mutations are allowed.
-- **Task:** one bounded objective or approved batch.
-- **Output:** the artifact or concise report expected.
-- **Stop condition:** approval gate or concrete ambiguity that should stop work.
-
-If Jorge says “that agent,” “same agent,” “continue from here,” “use `/tree`,” or similar, target the exact session/tree.
-Do not substitute a fresh session with copied context.
-If Jorge explicitly requests `/new` or a fresh sibling, say that the new session is intentional.
-
-Before submitting to an existing Pi pane, confirm it is not working and clear any staged input.
-Never append a prompt to existing input.
-
-## Drafting workflow
-
-1. Resolve the target workspace, pane, cwd, revision, and session plan.
-2. Choose the mode, intended outcome, semantic edit boundary, and source-control permissions without substituting a file inventory for the objective. Classify source artifacts as contextual or explicitly binding, and stop for clarity when their meaning or scope is materially ambiguous.
-3. Apply the task-sizing gate.
-4. If batching is needed, propose batches and stop for approval.
-5. Draft only the current bounded task.
-6. Run a compression pass:
-   - remove procedural instructions the agent can choose itself;
-   - remove context available in the repo;
-   - remove duplicated constraints and report sections;
-   - replace copied history with direct issue descriptions;
-   - confirm the task can finish without compaction.
-7. Clear the target input and submit.
-
-## Mode wording
-
-### Planning
+Example:
 
 ```text
-Mode: PLANNING ONLY.
-Do not modify files or source-control state.
-Identify the smallest missing delta. Before proposing a new role, permission, schema field, workflow, public API, or configuration primitive, verify whether existing primitives can express the outcome by composition or narrowing.
-Produce a concise implementation plan covering the key decisions, likely files, focused validation, and real open questions.
-Stop for Jorge’s approval before implementation.
+Implement <approved outcome> in <workspace and revision>.
+Context: <ticket, plan link/path/sections, and Jorge's guidance>.
+Keep this change limited to <scope>. Preserve <important existing behavior>.
+Recheck current source, implement the behavior and focused tests, and prepare the change for review.
+Leave source-control mutations and PR publication for separate authorization.
+Report changed behavior, checks run, and blockers concisely.
+Ask if completing the outcome requires work beyond the approved scope.
 ```
 
-Do not request a “full detailed plan” by default.
-The plan should be detailed enough to implement the bounded task, not an exhaustive architecture document.
+## Review and follow-ups
 
-### Investigation
+For review, identify what to review and the concerns that matter.
+Request actionable findings with file references and a concise verdict; make clear whether edits are requested.
+For a follow-up, carry the specific correction and enough context to make it understandable on its own.
+Honor references to a particular existing conversation rather than silently substituting another.
 
-```text
-Mode: INVESTIGATION ONLY.
-Do not modify files or source-control state.
-Answer <specific question> and report the evidence, conclusion, and remaining uncertainty concisely.
-```
+## Revise and finish
 
-Ask for a durable artifact only when another agent or future session genuinely needs it.
-
-### Review
-
-```text
-Mode: REVIEW ONLY.
-Do not modify files or source-control state.
-Review <bounded scope> for <named concerns>.
-Report actionable findings with file references and a verdict.
-```
-
-Do not give the reviewer a review procedure.
-Do not combine a broad review with implementation in the same prompt.
-If fixes are likely, review first and send a separate implementation batch after findings are approved.
-
-### Implementation
-
-```text
-Mode: IMPLEMENTATION.
-Approved outcome and seam: <one bounded result or batch>.
-Do not mutate source-control state or push unless explicitly authorized.
-Implement the required behavior and focused tests.
-Fix required discoveries that fit this seam. Report evidenced systemic issues outside it with their impact, evidence, and recommended remediation.
-Report changed files, checks run, and blockers concisely.
-Stop if required work exceeds this seam, would leave an incomplete fix, would entrench the systemic issue, or requires an unapproved schema/session/source-control change.
-```
-
-Expected files may be listed as orientation, not as a rigid cage.
-Trust the agent to choose the smallest correct surface for the approved outcome, including nearby code and tests when required.
-
-### Bookkeeping
-
-```text
-Mode: BOOKKEEPING.
-Allowed edits: <specific notes/task files>.
-Apply <specific update> and report the files changed.
-Do not alter code or source-control state.
-```
-
-## Technical issue prompts
-
-Describe technical findings in this compact shape:
-
-```text
-Issue: <what is wrong and where>.
-Impact: <why it matters>.
-Required invariant: <what must be true afterward>.
-```
-
-Usually omit the proposed algorithm.
-Include it only when Jorge approved that design or interoperability requires that exact mechanism.
-
-If several issues share one control-flow seam, they may form one batch.
-If they require independent designs or validation paths, split them.
-
-## Plan-based parallel work
-
-Parallel prompts still need a shared plan anchor and seam ownership, but keep sibling context minimal:
-
-```text
-Plan: <path and section>.
-You own: <seam and output>.
-Sibling dependency: <only the input/output this task directly touches>.
-Integration owner: <pane or later batch>.
-```
-
-Do not include every sibling’s history or responsibilities.
-If a missing sibling seam blocks the task, tell the agent to stop and report rather than inventing a temporary architecture.
-
-## Follow-ups and watchers
-
-A queued prompt must be safe and understandable when delivered later.
-Begin with:
-
-```text
-Follow-up after the previous task completes.
-Mode: <mode>.
-```
-
-Include the bounded task, permissions, session plan, and stop condition in the queued prompt itself.
-Do not rely on watcher shell comments or manager memory.
-
-Do not queue a large second phase merely because the first phase is still running.
-Wait for the first result when it could change the next batch.
-
-## Source-control wording
-
-Default no-mutation wording:
-
-```text
-Do not run source-control mutation commands or push. Read-only inspection is allowed.
-```
-
-When isolated mutation is explicitly authorized, state the exact operation and workspace.
-Do not mix mutation permission with a contradictory prohibition.
-
-## Anti-patterns
-
-Do not send prompts that:
-
-- bundle review, fixes, exhaustive tests, and final audit;
-- prescribe a long review or investigation procedure;
-- paste the prior agent’s full output when a short issue list suffices;
-- ask for multiple inventories, matrices, retrospectives, and plans in one response;
-- contain every possible validation command “just in case”;
-- use “full detailed,” “comprehensive,” or “exhaustive” without a user-requested reason;
-- enumerate many independent technical changes without first offering batches;
-- give a high-context agent another broad task instead of starting fresh;
-- say “fix it,” “revise,” or “continue” without mode and edit permissions;
-- replace required same-session continuity with copied context;
-- introduce unrelated topics through negative constraints;
-- replace a clear outcome with an exhaustive filename allowlist or exclusion catalog.
-
-## Pre-send checklist
-
-Before sending, answer yes:
-
-- Can this task reasonably finish in one context window without compaction?
-- If it is broad or highly technical, did I decompose it before drafting rather than outsourcing context management to the recipient?
-- Is this prompt only for the current approved batch?
-- Does its phase contain at most two implementation batches?
-- Did I state target, mode, edit permissions, source-control permissions, task, output, and stop condition?
-- Does the prompt express the actual user outcome and semantic boundary rather than copying a ticket or document's wording and decomposition?
-- For planning, does the prompt require checking composition or narrowing of existing primitives before proposing new ones?
-- For a task-manager, planning, or investigation delegation, did I leave current-state investigation, source reconciliation, solution selection, and decomposition to the receiving agent?
-- Is every binding scope decision or technical mechanism explicitly approved by Jorge, required by a verified public or runtime contract, or demanded by a genuine interoperability, security, or legal requirement rather than inferred from contextual source material?
-- Did I stop for Jorge's clarification instead of dispatching when source wording was ambiguous, strange, conflicting, too broad, overscoped, or supported materially different outcomes?
-- Are exact paths present only because Jorge, an approved plan/finding, or a real isolation boundary requires them?
-- Did I avoid dictating procedure for a broad review/investigation?
-- Did I pass concise findings instead of history and transcripts?
-- Did I remove context the agent can derive from the repo?
-- Is the business context short and decision-relevant?
-- Is the session/tree plan explicit?
-- Is the target agent idle with a clean input box?
-
-If the first answer is no, do not send the prompt.
-Split the task or start a fresh agent with a smaller batch.
+When Jorge revises the handoff, return the entire updated prompt unless he explicitly asks for only a snippet.
+Integrate corrections, links, and scope decisions into one copy-paste-ready version.
+Check it once for missing context, stale facts, accidental scope growth, and unnecessary procedure.
+Prefer short sentences and bullets; omit repetitive exclusions and generic instructions the repository already supplies.
+Then present the prompt. Saving or sending it is a separate requested action.
