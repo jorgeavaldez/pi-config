@@ -7,7 +7,7 @@
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { TUI, Component } from "@earendil-works/pi-tui";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
 // =============================================================================
@@ -45,7 +45,7 @@ export function clearActiveEditFile(): void {
  * Get the user's preferred editor with fallback chain.
  * $EDITOR → $VISUAL → first available of nvim/vim/vi → vi
  */
-export function getEditor(): string {
+function getEditor(): string {
   const configuredEditor = process.env.EDITOR || process.env.VISUAL;
   if (configuredEditor) {
     return configuredEditor;
@@ -53,8 +53,8 @@ export function getEditor(): string {
 
   for (const candidate of ["nvim", "vim", "vi"] as const) {
     try {
-      const result = spawnSync("which", [candidate], { encoding: "utf-8", timeout: 1000 });
-      if (result.status === 0 && result.stdout.trim()) {
+      const result = spawnSync(candidate, ["--version"], { stdio: "ignore", timeout: 1000 });
+      if (result.status === 0) {
         return candidate;
       }
     } catch {
@@ -65,72 +65,56 @@ export function getEditor(): string {
   return "vi";
 }
 
-/**
- * Get editor arguments to position cursor at a specific line.
- * Supports vim/nvim/vi, nano, and emacs.
- */
-export function getEditorArgs(filePath: string, cursorLine?: number): string[] {
-  if (cursorLine === undefined) {
-    return [filePath];
-  }
-
+/** Launch the configured editor without a shell; callers own terminal suspension. */
+export function runEditor(filepath: string, cursorLine?: number): Promise<number | null> {
   const editor = getEditor();
-  const editorName = editor.split("/").pop()?.toLowerCase() || "";
-
-  // vim, nvim, vi all support +line syntax
-  if (editorName.includes("vim") || editorName.includes("vi") || editorName === "nvim") {
-    return [`+${cursorLine}`, filePath];
+  // EDITOR is a command plus arguments, not a single executable path. Preserve
+  // quoted paths and Windows backslashes without invoking a shell.
+  const parts = (editor.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? []).map((part) =>
+    part.replace(/"([^"]*)"|'([^']*)'/g, (_match, double: string | undefined, single: string | undefined) =>
+      double ?? single ?? ""
+    )
+  );
+  const command = parts.shift();
+  if (!command) return Promise.resolve(null);
+  const editorName = editor.split(/[/\\]/).pop()?.toLowerCase() ?? "";
+  if (cursorLine !== undefined && /vi|nano|emacs/.test(editorName)) {
+    parts.push(`+${cursorLine}`);
   }
+  parts.push(filepath);
 
-  // nano supports +line syntax
-  if (editorName.includes("nano")) {
-    return [`+${cursorLine}`, filePath];
-  }
-
-  // emacs supports +line syntax
-  if (editorName.includes("emacs")) {
-    return [`+${cursorLine}`, filePath];
-  }
-
-  // Default: just the file path
-  return [filePath];
+  // Async spawning releases Pi's console input before Neovim reads it on Windows.
+  return new Promise((resolve) => {
+    const child = spawn(command, parts, { stdio: "inherit", env: process.env });
+    child.on("error", () => resolve(null));
+    child.on("close", resolve);
+  });
 }
 
-/**
- * Open a file in the user's editor, suspending TUI during editing.
- * Returns true only when the editor exits successfully (status 0).
- */
+/** Open an editor with the TUI suspended. Only exit status 0 means committed. */
 export async function openInEditor(
   filepath: string,
   cursorLine: number | undefined,
   ctx: ExtensionContext
 ): Promise<boolean> {
-  if (ctx.mode !== "tui") {
-    return false;
-  }
+  if (ctx.mode !== "tui") return false;
 
-  const editor = getEditor();
-  const editorArgs = getEditorArgs(filepath, cursorLine);
-
-  return ctx.ui.custom<boolean>((tui: TUI, _theme, _kb, done) => {
+  return ctx.ui.custom<boolean>(async (tui: TUI, _theme, _kb, done) => {
     // Stop TUI to release terminal
     tui.stop();
 
     // Clear screen
     process.stdout.write("\x1b[2J\x1b[H");
 
-    // Spawn editor
-    const result = spawnSync(editor, editorArgs, {
-      stdio: "inherit",
-      env: process.env,
-    });
+    let succeeded = false;
+    try {
+      succeeded = (await runEditor(filepath, cursorLine)) === 0;
+    } finally {
+      tui.start();
+      tui.requestRender(true);
+    }
 
-    // Restart TUI
-    tui.start();
-    tui.requestRender(true);
-
-    // Signal completion
-    done(result.status === 0);
+    done(succeeded);
 
     // Return empty component (immediately disposed since done() was called)
     const emptyComponent: Component = {

@@ -1,13 +1,12 @@
 import type { ExtensionCommandContext, KeybindingsManager, Theme } from "@earendil-works/pi-coding-agent";
 import { DynamicBorder, getSelectListTheme, rawKeyHint } from "@earendil-works/pi-coding-agent";
 import { Container, Editor, matchesKey, Spacer, Text, type Focusable, type TUI } from "@earendil-works/pi-tui";
-import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getEditor, getEditorArgs } from "./editor-state.js";
+import { runEditor } from "./editor-state.js";
 
-function editBufferExternally(text: string, tui: TUI, tempFilePrefix: string): string | undefined | null {
+async function editBufferExternally(text: string, tui: TUI, tempFilePrefix: string): Promise<string | undefined | null> {
 	const tempDir = mkdtempSync(join(tmpdir(), tempFilePrefix));
 	const tempFile = join(tempDir, "buffer.md");
 
@@ -16,16 +15,13 @@ function editBufferExternally(text: string, tui: TUI, tempFilePrefix: string): s
 		tui.stop();
 		process.stdout.write("\x1b[2J\x1b[H");
 
-		const result = spawnSync(getEditor(), getEditorArgs(tempFile, 1), {
-			stdio: "inherit",
-			env: process.env,
-		});
+		const exitCode = await runEditor(tempFile, 1);
 
-		if (result.status === 0) {
+		if (exitCode === 0) {
 			return readFileSync(tempFile, "utf-8");
 		}
 
-		if (result.status === 1) {
+		if (exitCode === 1) {
 			return undefined;
 		}
 
@@ -40,6 +36,7 @@ function editBufferExternally(text: string, tui: TUI, tempFilePrefix: string): s
 class ExternalEditableEditor extends Container implements Focusable {
 	private editor: Editor;
 	private _focused = false;
+	private editingExternally = false;
 
 	get focused(): boolean {
 		return this._focused;
@@ -87,20 +84,27 @@ class ExternalEditableEditor extends Container implements Focusable {
 	}
 
 	handleInput(data: string): void {
+		if (this.editingExternally) return;
+
 		if (this.keybindings.matches(data, "tui.select.cancel")) {
 			this.onCancel();
 			return;
 		}
 
 		if (matchesKey(data, "ctrl+g")) {
-			const edited = editBufferExternally(this.editor.getExpandedText(), this.tui, this.tempFilePrefix);
-			if (edited === null) {
-				this.notifyError("External editor failed");
-				return;
-			}
-			if (edited !== undefined) {
-				this.editor.setText(edited.replace(/\n$/, ""));
-			}
+			this.editingExternally = true;
+			void editBufferExternally(this.editor.getExpandedText(), this.tui, this.tempFilePrefix)
+				.then((edited) => {
+					if (edited === null) this.notifyError("External editor failed");
+					else if (edited !== undefined) this.editor.setText(edited.replace(/\n$/, ""));
+				})
+				.catch((error: unknown) => {
+					this.notifyError(`External editor failed: ${error instanceof Error ? error.message : String(error)}`);
+				})
+				.finally(() => {
+					this.editingExternally = false;
+					this.tui.requestRender(true);
+				});
 			return;
 		}
 
