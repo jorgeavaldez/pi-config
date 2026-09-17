@@ -14,8 +14,6 @@
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-6-astra",
-  "shellPath": "~/.pi/agent/bin/pi-zsh",
-  "shellCommandPrefix": "source ~/.zprofile >/dev/null 2>&1",
   "skills": [
     "./skills/",
     "./private-skills/"
