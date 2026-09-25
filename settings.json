@@ -1,19 +1,18 @@
 {
-  "lastChangelogVersion": "0.85.1",
+  "lastChangelogVersion": "0.87.1",
   "defaultThinkingLevel": "high",
   "theme": "dark",
   "enabledModels": [
-    "openai-codex/gpt-5.6-sol",
-    "openai-codex/gpt-5.6-terra",
-    "openai-codex/gpt-5.6-luna",
     "openai-codex/gpt-6-astra",
     "openrouter/meta/muse-spark-1.3",
     "openrouter/deepseek/deepseek-v4.1-flash:nitro",
-    "xai/grok-4.6"
+    "xai/grok-4.6",
+    "openai-codex/gpt-6-luna",
+    "openai-codex/gpt-6-sol"
   ],
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-6-astra",
+  "defaultModel": "gpt-6-sol",
   "skills": [
     "./skills/",
     "./private-skills/"
