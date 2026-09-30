@@ -12,7 +12,7 @@ Files:
 ## Initialization
 At extension load:
 - `editor-env.ts` searches for `<config-home>/<NVIM_APPNAME or nvim>/bin/pi-nvim-editor` in `XDG_CONFIG_HOME`, Windows `LOCALAPPDATA`, then `~/.config`.
-- When the wrapper exists, it sets `EDITOR` and `VISUAL` to `node <wrapper-path>`, quoting paths with spaces or special characters. A Unix executable bit is not required.
+- When the wrapper exists, it sets `EDITOR` and `VISUAL` to `bash <wrapper-path>` for Bash clients (identified by their shebang), or `node <wrapper-path>` for JavaScript clients, quoting paths with spaces or special characters. A Unix executable bit is not required; the selected interpreter must be available.
 - Without a wrapper, it retains `EDITOR` or uses `VISUAL`, defaulting to `nvim`, and fills an unset `VISUAL` from `EDITOR`. No warning is emitted.
 
 Important: this is process-wide; spawned subprocesses inherit these env vars.
@@ -45,7 +45,7 @@ echo "$VISUAL"
 ## Troubleshooting (short)
 
 ### 1) `EDITOR`/`VISUAL` not set to wrapper
-- Check the configured wrapper path and `NVIM_APPNAME`; the wrapper is invoked with Node, not via its shebang.
+- Check the configured wrapper path and `NVIM_APPNAME`. Bash clients must be invoked with Bash, not Node; JavaScript clients use Node.
 - Restart Pi or reload extensions after correcting the path.
 
 ### 2) Ctrl+G opens but flow feels slow

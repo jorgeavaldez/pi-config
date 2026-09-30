@@ -5,7 +5,7 @@
  * Devices without the client keep their editor preference, defaulting to Neovim.
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -28,9 +28,10 @@ export default function editorEnvExtension() {
     return;
   }
 
-  // Invoke Node explicitly: Windows cannot execute Unix shebang scripts.
-  // Quoting keeps config paths containing spaces intact for editor consumers.
-  const editor = `node ${/[\s"'&|<>^()]/.test(wrapperPath) ? `"${wrapperPath}"` : wrapperPath}`;
+  // Installed clients can be Bash or JavaScript. Invoke the interpreter explicitly
+  // rather than relying on Unix shebang execution (unavailable on Windows).
+  const interpreter = /^#![^\r\n]*\bbash(?:\s|$)/.test(readFileSync(wrapperPath, "utf8")) ? "bash" : "node";
+  const editor = `${interpreter} ${/[\s"'&|<>^()]/.test(wrapperPath) ? `"${wrapperPath}"` : wrapperPath}`;
   process.env.EDITOR = editor;
   process.env.VISUAL = editor;
 }

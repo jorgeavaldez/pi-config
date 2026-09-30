@@ -8,7 +8,7 @@ import { test } from "node:test";
 const bootstrap = new URL("../editor-env.ts", import.meta.url).href;
 const editorState = new URL("../shared/editor-state.ts", import.meta.url).href;
 
-test("editor bootstrap and launcher preserve paths and exit codes", (t) => {
+test("editor bootstrap and launcher preserve paths and exit codes", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "pi editor ü "));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const config = join(root, "config");
@@ -16,10 +16,10 @@ test("editor bootstrap and launcher preserve paths and exit codes", (t) => {
   mkdirSync(bin, { recursive: true });
   const wrapper = join(bin, "pi-nvim-editor");
   const recorded = join(root, "arguments.json");
-  writeFileSync(wrapper, `
+  const nodeClient = `
     require("node:fs").writeFileSync(process.env.PI_EDITOR_ARGS_FILE, JSON.stringify(process.argv.slice(2)));
     process.exit(Number(process.env.PI_EDITOR_EXIT));
-  `);
+  `;
   const target = join(root, "draft 'quoted' & spaced.md");
   const env = {
     ...process.env,
@@ -31,17 +31,41 @@ test("editor bootstrap and launcher preserve paths and exit codes", (t) => {
     VISUAL: undefined,
     PI_EDITOR_ARGS_FILE: recorded,
   };
-  for (const code of [0, 1, 2]) {
-    const result = spawnSync("node", ["--input-type=module", "-e", `
-      import initialize from ${JSON.stringify(bootstrap)};
-      import { runEditor } from ${JSON.stringify(editorState)};
-      initialize();
-      console.log(await runEditor(${JSON.stringify(target)}, 3));
-    `], { env: { ...env, PI_EDITOR_EXIT: String(code) }, encoding: "utf8", timeout: 5000 });
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.stderr, "");
-    assert.equal(result.stdout.trim(), String(code));
-    assert.equal(readFileSync(recorded, "utf8"), JSON.stringify(["+3", target]));
+  for (const [interpreter, shebang] of [
+    ["node", ""],
+    ["bash", "#!/usr/bin/env bash"],
+    ["bash", "#!/bin/bash"],
+  ]) {
+    await t.test(shebang || "Node client", { skip: interpreter === "bash" && process.platform === "win32" }, () => {
+      writeFileSync(
+        wrapper,
+        interpreter === "node" ? nodeClient : `${shebang}\nnode - "$@" <<'NODE'\n${nodeClient}\nNODE\n`,
+      );
+      for (const code of [0, 1, 2]) {
+        const result = spawnSync(
+          "node",
+          [
+            "--input-type=module",
+            "-e",
+            `
+          import initialize from ${JSON.stringify(bootstrap)};
+          import { runEditor } from ${JSON.stringify(editorState)};
+          initialize();
+          console.log(await runEditor(${JSON.stringify(target)}, 3));
+        `,
+          ],
+          {
+            env: { ...env, PI_EDITOR_EXIT: String(code) },
+            encoding: "utf8",
+            timeout: 5000,
+          },
+        );
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(result.stderr, "");
+        assert.equal(result.stdout.trim(), String(code));
+        assert.equal(readFileSync(recorded, "utf8"), JSON.stringify(["+3", target]));
+      }
+    });
   }
 });
 

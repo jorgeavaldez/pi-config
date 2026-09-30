@@ -54,7 +54,7 @@ The extension handles the configured `app.editor.external` action (normally `Ctr
 
 ### pi ↔ nvim rpc flow
 
-`editor-env` sets `EDITOR`/`VISUAL` to invoke the available `pi-nvim-editor` wrapper through Node; without it, the configured editor is retained, defaulting to Neovim.
+`editor-env` sets `EDITOR`/`VISUAL` to invoke the available `pi-nvim-editor` wrapper through its interpreter: Bash for Bash clients, Node for JavaScript clients. Without it, the configured editor is retained, defaulting to Neovim.
 
 This gives the main prompt and review dialogs a host-aware external edit path:
 - if pi runs inside nvim `:terminal`, edits open in the host nvim
