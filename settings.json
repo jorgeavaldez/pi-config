@@ -13,14 +13,12 @@
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-6.1-sol",
-  "skills": [
-    "./skills/",
-    "./private-skills/"
-  ],
+  "skills": ["./skills/", "./private-skills/"],
   "packages": [
     "npm:@ff-labs/pi-fff",
     "npm:pi-web-search",
     "npm:pi-agent-browser-native@0.6.10",
     "git:github.com/stnly/pi-grok"
-  ]
+  ],
+  "defaultTools": ["+codemode"]
 }
