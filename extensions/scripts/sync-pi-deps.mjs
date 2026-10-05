@@ -15,33 +15,34 @@ function stripVersion(range) {
 }
 
 function findPiBinary() {
-  const pathEntries = (process.env.PATH ?? "")
-    .split(path.delimiter)
-    .filter(Boolean);
+  const pathEntries = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
 
+  const binaryNames = process.platform === "win32" ? ["pi.exe", "pi.cmd"] : ["pi"];
   const workspaceNodeModules = path.join(workspaceDir, "node_modules") + path.sep;
   let fallback = null;
 
   for (const entry of pathEntries) {
-    const candidate = path.join(entry, process.platform === "win32" ? "pi.cmd" : "pi");
-    if (!fs.existsSync(candidate)) continue;
+    for (const binaryName of binaryNames) {
+      const candidate = path.join(entry, binaryName);
+      if (!fs.existsSync(candidate)) continue;
 
-    let resolved;
-    try {
-      resolved = fs.realpathSync(candidate);
-    } catch {
-      continue;
+      let resolved;
+      try {
+        resolved = fs.realpathSync(candidate);
+      } catch {
+        continue;
+      }
+
+      if (!fallback) {
+        fallback = candidate;
+      }
+
+      if (resolved.startsWith(workspaceNodeModules)) {
+        continue;
+      }
+
+      return candidate;
     }
-
-    if (!fallback) {
-      fallback = candidate;
-    }
-
-    if (resolved.startsWith(workspaceNodeModules)) {
-      continue;
-    }
-
-    return candidate;
   }
 
   if (fallback) {
