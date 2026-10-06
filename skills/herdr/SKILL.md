@@ -9,6 +9,12 @@ This skill owns command mechanics.
 `herdr-manager` owns routing, task/session continuity, and watcher safety.
 `agent-prompt-drafting` owns delegated prompt wording and permissions.
 
+## Prefer the Herdr tool
+
+Discover the deferred `herdr` tool with `tool_search` (or codemode `searchTools("herdr")`), then read `describeNamespace("herdr")` for its on-demand instructions. Prefer `tools.herdr({ route, request })` for workspace/tab/pane inventories, pane/agent inspection and bounded reads, agent waits, and verified ready-agent prompts. Requests are operation-specific; results are structured success/error variants. A successful wait is not proof of task success; errors never authorize automatic resubmission.
+
+Use the CLI mechanics below for unsupported operations such as authorized layout changes, startup, raw commands or interactive controls, or when the tool is unavailable. The same explicit routing, identity, readiness and result-handling policy applies to both surfaces.
+
 ## Choose the control route
 
 Choose the control mode before issuing any Herdr command:
