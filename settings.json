@@ -7,8 +7,7 @@
     "openai-codex/gpt-6-luna",
     "openai-codex/gpt-6.1-sol",
     "opencode-go/muse-spark-1.3-contributor",
-    "opencode-go/deepseek-v4.1-flash",
-    "xai/grok-4.7"
+    "opencode-go/deepseek-v4.1-flash"
   ],
   "hideThinkingBlock": false,
   "defaultProvider": "openai-codex",

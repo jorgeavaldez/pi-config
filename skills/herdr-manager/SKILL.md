@@ -1,11 +1,11 @@
 ---
 name: herdr-manager
-description: Coordinate local or explicitly named remote Herdr sessions safely by mapping tasks to exact hosts, workspaces, panes, Pi sessions, cwd, and revisions; routing work; and queueing task-local follow-ups without cross-workspace confusion.
+description: Coordinate Pi and Claude Code agents in local or explicitly named remote Herdr sessions by mapping tasks to exact hosts, workspaces, panes, agent sessions, cwd, and revisions; routing work; and queueing task-local follow-ups without cross-workspace confusion.
 ---
 
 # Herdr Manager
 
-Use this skill when coordinating other Herdr panes and Pi agents.
+Use this skill when coordinating other Herdr panes and Pi or Claude Code agents.
 
 Ownership is strict:
 
@@ -14,6 +14,7 @@ Ownership is strict:
 - `agent-prompt-drafting` owns task sizing, prompt wording, modes, permissions, approval gates, and expected output.
 
 Load `herdr` before controlling panes. Load `agent-prompt-drafting` before writing or sending agent instructions.
+Keep custom delegation policy here; do not edit the `herdr` skill.
 
 ## Environment and control route
 
@@ -22,9 +23,21 @@ Establish one route before acting:
 - **Local:** require `HERDR_ENV=1` and keep the current pane as coordinator unless the user says otherwise.
 - **Remote:** use only an explicitly requested SSH target and exact named Herdr session. Verify the session through the SSH transport defined by the `herdr` skill, then scope every session-specific command to it. The dispatching shell does not need `HERDR_ENV=1`.
 
-If neither route is fully identified, ask whether Jorge wants to use a local Herdr-managed pane or which SSH target and named remote session to use. Do not flatly refuse, guess a target, use a default session, or require Jorge to pre-start a Pi agent in the remote Herdr.
+If neither route is fully identified, ask whether Jorge wants to use a local Herdr-managed pane or which SSH target and named remote session to use. Do not flatly refuse, guess a target, use a default session, or require Jorge to pre-start an agent in the remote Herdr.
 
 Do not mix local and remote inventory or actions. Remote authorization is limited to the exact target and named session the user selected. Do not perform implementation, investigation, or review-fix work in the coordinator pane. This separation does not require a new agent for every workflow stage: route a bounded follow-up to one existing task owner whenever that is the smallest safe handoff.
+
+## Agent selection
+
+Honor the requested harness; a Pi coordinator can dispatch Claude Code agents for implementation or review.
+Do not change an existing task owner or the default agent choice merely because Claude Code is available.
+Before the first Claude dispatch on the selected host, check `claude --version`, `claude auth status`, and the installed `herdr agent start --help` through that host's login shell.
+Reuse a working Claude login; do not reinstall or start reauthentication when it is already signed in.
+
+Use the `herdr` skill's normal start/prompt/wait workflow with `--kind claude`; pass any native Claude options after `--`.
+Keep the authorized Herdr and jj workspace layout; do not add Claude's `--worktree` or `--tmux` as an alternative isolation mechanism.
+Do not enable blanket permission bypass to get past startup or tool approvals.
+Pass applicable `AGENTS.md` and `CLAUDE.md` paths, task permissions, and jj-only source-control requirements to `agent-prompt-drafting`; Claude does not inherit the coordinator's global Pi instructions.
 
 ## Inventory and map live state
 
@@ -41,7 +54,7 @@ In remote mode these are the inner commands executed over SSH with the exact nam
 Map each task to:
 
 ```text
-task -> control route -> SSH target (remote only) -> Herdr session -> workspace -> tab -> pane -> Pi session/tree -> cwd -> revision
+task -> control route -> SSH target (remote only) -> Herdr session -> workspace -> tab -> pane -> agent kind and native session (Pi tree when applicable) -> cwd -> revision
 ```
 
 Use `herdr pane read <pane> --source recent-unwrapped --lines 80` only when needed to confirm the workstream, session, or context usage. Read only enough lines to make the routing decision. For repository work, verify the target cwd and revision with read-only `jj` commands when the action depends on them.
@@ -75,19 +88,20 @@ Delegation is a real boundary, not a default phase transition, but minimizing ag
 
 A skill's internal stages do not by themselves justify separate agents. Apply the global smallest-complete-outcome rule to each assignment, not to the number of sessions.
 
-Workspace isolation and Pi session continuity are separate. A new workspace does not authorize a fresh Pi session when the user requested the same session or tree.
+Workspace isolation and agent session continuity are separate. A new workspace does not authorize a fresh conversation when the user requested the same session or Pi tree.
 
 ## Session continuity and context ownership
 
-Treat “that agent,” “same agent,” “continue from here,” and `/tree` references as exact routing requirements. Use the requested session/tree when it can be identified safely; do not replace explicit continuity with copied context in a fresh session.
+Treat “that agent,” “same agent,” “continue from here,” and Pi `/tree` references as exact routing requirements. Use the requested native session when it can be identified safely; do not replace explicit continuity with copied context in a fresh session or switch harnesses.
+For Claude Code, resume the verified conversation with `--resume <session-id>`; do not use `--continue`, which selects the most recent conversation in the cwd, as a substitute for an exact session.
 
-Otherwise, context budgeting is the manager's responsibility. Pi recipients do not control automatic compaction and cannot reliably self-police their live context usage. Never delegate that responsibility in a prompt.
+Otherwise, context budgeting is the manager's responsibility for either harness. Pi recipients do not control automatic compaction and cannot reliably self-police their live context usage. Never delegate context monitoring to the recipient.
 
 - Estimate task size before dispatch and decompose work that could consume one session.
 - Inspect available pane or session metadata before assigning a follow-up; never rely on the child to report its own percentage.
 - Reuse a session only for a genuinely small continuation with ample context.
 - Prefer a fresh session with a concise task-local handoff for a substantial new role, seam, batch, or validation pass.
-- Use `/tree` when exact earlier-session continuity is necessary. Use `/compact` only when Jorge explicitly requests it or a fresh task-local handoff cannot preserve required continuity.
+- For Pi, use `/tree` when exact earlier-session continuity is necessary. Use `/compact` only when Jorge explicitly requests it or a fresh task-local handoff cannot preserve required continuity. Do not send Pi commands to Claude Code.
 
 Do not assign substantial new work to a session near 50% context. Treat 70% as unavailable for further substantive work, not as a cue to compact and continue.
 
@@ -100,7 +114,7 @@ For tasks expected to run long, poll the child's status and context pressure whi
 Before delegating:
 
 1. Confirm the user authorized dispatch now. Future intent, prioritization, or discussion of what to delegate next is not immediate dispatch authorization.
-2. Confirm the task owner, plan or PR anchor, task-owned workspace, pane, session plan, cwd, and revision.
+2. Confirm the task owner, requested agent kind, plan or PR anchor, task-owned workspace, pane, native session plan, cwd, and revision.
 3. Confirm any requested workspace creation, reuse, or source-control operation is authorized.
 4. For parallel work, confirm the seams are independent and identify the integration owner and order.
 5. Load `agent-prompt-drafting` and give it the routing facts.
@@ -118,7 +132,7 @@ Queue a follow-up only when all of these are known:
 - target pane and task;
 - trigger pane and actual dependency;
 - target and trigger workspace relationship;
-- target session/tree plan;
+- target agent kind and native session plan;
 - self-contained prompt produced with `agent-prompt-drafting`.
 
 Create the watcher in the target task's workspace, preferably by splitting the target pane. Cross-workspace watchers require explicit user approval.
@@ -130,6 +144,8 @@ After queueing, report the target, trigger, watcher, dependency, and session pla
 
 Create an independent review agent only when the user requests one or a concrete risk, ownership boundary, integration seam, or delivery gate justifies it. Implementation having occurred, or review comments having been addressed, is not by itself a reason for another review pass. A bounded follow-up that the task owner has inspected and validated should normally finish with one concise report.
 
+Review assignments are read-only unless Jorge explicitly authorizes fixes, regardless of whether the reviewer uses Pi or Claude Code.
+
 When independent review is justified, run it in a clean tab in the implementation workspace. If implementation is still running, wait using the `herdr` skill's normal settled-state workflow, then inspect the implementation result before dispatching review. Do not require the `done` badge or treat `blocked`, a timeout, or an idle but never-prompted agent as completed implementation.
 
 After parallel implementation, use one serial reconciliation review when the seams share interfaces or design. Use parallel reviewers only for genuinely independent surfaces.
@@ -139,7 +155,7 @@ After parallel implementation, use one serial reconciliation review when the sea
 Report only operational routing state:
 
 - task or phase;
-- control route, SSH target and named Herdr session when remote, workspace, pane, Pi session/tree, cwd, and revision when relevant;
+- control route, SSH target and named Herdr session when remote, workspace, pane, agent kind and native session (Pi tree when applicable), cwd, and revision when relevant;
 - current agent status and material context pressure;
 - continuation or recovery choice;
 - watcher trigger/target mapping;
