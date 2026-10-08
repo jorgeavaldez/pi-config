@@ -71,6 +71,7 @@ async function setup(t: TestContext, extension: string, externalKeys: KeyId[] = 
     clearFromCursor() {},
     clearScreen() {},
     setTitle() {},
+    setProgramStatus() {},
     setProgress() {},
   });
   const stop = t.mock.method(tui, "stop", () => {});

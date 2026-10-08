@@ -101,6 +101,7 @@ async function setup(t: TestContext, jj = false) {
     clearFromCursor() {},
     clearScreen() {},
     setTitle() {},
+    setProgramStatus() {},
     setProgress() {},
   });
   t.mock.method(tui, "requestRender", () => rendered.resolve());

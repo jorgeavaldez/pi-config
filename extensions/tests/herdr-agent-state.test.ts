@@ -166,7 +166,7 @@ test("Herdr v9 session reporting and semantic compaction lifecycle", { timeout: 
         : { agent_session_path: file };
       await expectPacket("pane.report_agent_session", reference);
       await expectPacket("pane.report_agent", { state: "working", ...reference });
-      await runner.emit({ type: "agent_settled" });
+      await runner.emit({ type: "agent_settled", aborted: false });
       await expectState("idle");
     });
   }
@@ -191,9 +191,9 @@ test("Herdr v9 session reporting and semantic compaction lifecycle", { timeout: 
           if (outcome !== "cancel") await expectState("idle");
         } else {
           // A non-idle settlement must not clear the active turn, even after compaction ends.
-          await runner.emit({ type: "agent_settled" });
+          await runner.emit({ type: "agent_settled", aborted: false });
           state.idle = true;
-          await runner.emit({ type: "agent_settled" });
+          await runner.emit({ type: "agent_settled", aborted: false });
           await expectState("idle");
         }
         // A completed attempt's signal cannot affect a later attempt.
@@ -227,7 +227,7 @@ test("Herdr v9 session reporting and semantic compaction lifecycle", { timeout: 
     await expectState("blocked", "approval");
     events.emit("herdr:blocked", { active: true, label: "nested" });
     await expectState("blocked", "nested");
-    await runner.emit({ type: "agent_settled" });
+    await runner.emit({ type: "agent_settled", aborted: false });
     events.emit("herdr:blocked", { active: false });
     events.emit("herdr:blocked", { active: false });
     await expectState("working");
@@ -255,7 +255,7 @@ test("Herdr v9 session reporting and semantic compaction lifecycle", { timeout: 
     await runner.emit({ type: "agent_start" });
     await expectPacket("pane.report_agent_session", { agent_session_path: state.file });
     await expectState("working");
-    await runner.emit({ type: "agent_settled" });
+    await runner.emit({ type: "agent_settled", aborted: false });
     await expectState("idle");
   });
   assert.deepEqual(errors, []);

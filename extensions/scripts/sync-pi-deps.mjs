@@ -57,6 +57,17 @@ function getInstalledPiInfo() {
   const piCliPath = fs.realpathSync(piBin);
   let currentDir = path.dirname(piCliPath);
 
+  // Managed launchers live in agent/bin, outside the active release's package tree.
+  const managedRoot = path.resolve(currentDir, "..", "install");
+  const currentVersionPath = path.join(managedRoot, "current-version");
+  if (fs.existsSync(currentVersionPath)) {
+    const version = fs.readFileSync(currentVersionPath, "utf8").trim();
+    if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version)) {
+      throw new Error(`Managed Pi version file is invalid: ${currentVersionPath}`);
+    }
+    currentDir = path.join(managedRoot, "releases", version, "node_modules", "@earendil-works", "pi-coding-agent");
+  }
+
   while (true) {
     const piPackageJsonPath = path.join(currentDir, "package.json");
     if (fs.existsSync(piPackageJsonPath)) {
