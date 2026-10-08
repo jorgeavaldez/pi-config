@@ -15,6 +15,9 @@ extensions/node_modules/
 
 PLAN.md
 
+# Managed Pi installation
+/install/
+
 # Binary/executable directory
 bin/*
 !bin/pi-zsh
