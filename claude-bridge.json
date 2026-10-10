@@ -1,3 +1,6 @@
 {
-  "startupNoticeShown": "2026-10-10"
+  "startupNoticeShown": "2026-10-10",
+  "provider": {
+    "pathToClaudeCodeExecutable": "claude"
+  }
 }

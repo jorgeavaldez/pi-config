@@ -1,6 +1,6 @@
 {
   "lastChangelogVersion": "1.1.0",
-  "defaultThinkingLevel": "xhigh",
+  "defaultThinkingLevel": "high",
   "theme": "system",
   "enabledModels": [
     "openai-codex/gpt-6-astra",
