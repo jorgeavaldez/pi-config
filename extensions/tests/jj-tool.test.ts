@@ -32,6 +32,8 @@ const Diagnostics = Type.Array(Type.Object({ argv: Type.Array(Type.String()), ex
 const ErrorOutput = Type.Object({ ok: Type.Literal(false), error: Type.Object({ kind: Type.String(), message: Type.String() }), commands: Diagnostics, stdout: TextOutput });
 const Calls = Type.Array(Type.Object({ args: Type.Array(Type.String()), cwd: Type.String() }));
 
+// The fake jj is an extensionless shebang script, which Windows cannot spawn; the real jj would run instead.
+const posixFixtures = process.platform === "win32" ? "fake jj fixture is a POSIX shebang script" : false;
 async function setup(t: TestContext, fake = true) {
   const root = mkdtempSync(join(tmpdir(), "pi-jj-tool-test-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -133,7 +135,7 @@ test("operation-discriminated parameters admit only relevant variants and bounds
   ]) assert.equal(Check(definition.parameters, input), false, JSON.stringify(input));
 });
 
-test("status returns exact structured revision, parent, conflict, file and bookmark data", async (t) => {
+test("status returns exact structured revision, parent, conflict, file and bookmark data", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   const result = await harness.call({ operation: "status" });
   assert.equal(result.isError, false);
@@ -145,7 +147,7 @@ test("status returns exact structured revision, parent, conflict, file and bookm
   assert.deepEqual(harness.calls()[0]?.args.slice(0, 3), [`--repository=${harness.root}`, "--no-pager", "--color=never"]);
 });
 
-test("literal paths and revision expressions travel in argv without option or shell injection", async (t) => {
+test("literal paths and revision expressions travel in argv without option or shell injection", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   const malicious = '-r @; touch "not-created"\n$(new) | --config=x';
   const literalPath = '-file:[a]* "x"\n\b\f\u001b; $(touch pwned)';
@@ -162,7 +164,7 @@ test("literal paths and revision expressions travel in argv without option or sh
   assert.equal(calls[0]?.cwd, harness.root);
 });
 
-test("show pins its bounded patch to the full resolved commit ID", async (t) => {
+test("show pins its bounded patch to the full resolved commit ID", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   harness.respond({ stdout: ndjson([revision]), patch: "diff --git a/a b/a\n+text\n", stderr: "warning\n" });
   const result = await harness.call({ operation: "show", revision: "@" });
@@ -178,7 +180,7 @@ test("show pins its bounded patch to the full resolved commit ID", async (t) => 
   assert.equal(Parse(ErrorOutput, (await harness.call({ operation: "show", revision: "none()" })).structuredContent).error.kind, "invalid_request");
 });
 
-test("diff exposes explicit revision/range comparisons and machine files or bounded patch", async (t) => {
+test("diff exposes explicit revision/range comparisons and machine files or bounded patch", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   harness.respond({ stdout: ndjson([changedFile]) });
   const files = await harness.call({ operation: "diff", comparison: { kind: "range", from: "@-", to: "@" }, format: "files", paths: ["a*"] });
@@ -191,7 +193,7 @@ test("diff exposes explicit revision/range comparisons and machine files or boun
   assert.ok(harness.calls()[1]?.args.includes("--git"));
 });
 
-test("bookmark list includes all remotes with literal name and revset transport", async (t) => {
+test("bookmark list includes all remotes with literal name and revset transport", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   harness.respond({ stdout: ndjson([bookmark, { ...bookmark, remote: "origin" }]) });
   const result = await harness.call({ operation: "bookmark_list", names: ["a*[x]; new"], revset: "@ | @-" });
@@ -214,7 +216,7 @@ test("runtime rejects mutating operations, extra argv and relative repositories 
   assert.deepEqual(harness.calls(), []);
 });
 
-test("subprocess failures preserve actual exit, stderr and partial stdout as structured errors", async (t) => {
+test("subprocess failures preserve actual exit, stderr and partial stdout as structured errors", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   harness.respond({ code: 7, stdout: "partial stdout", stderr: "invalid revset\n" });
   const result = await harness.call({ operation: "log", revset: "bad" });
@@ -230,7 +232,7 @@ test("subprocess failures preserve actual exit, stderr and partial stdout as str
   assert.equal(Parse(ErrorOutput, (await harness.call({ operation: "bookmark_list" })).structuredContent).error.kind, "invalid_output");
 });
 
-test("missing jj is a structured spawn failure, not an invented exit code", async (t) => {
+test("missing jj is a structured spawn failure, not an invented exit code", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   rmSync(join(harness.bin, "jj"));
   process.env.PATH = harness.bin;
@@ -241,7 +243,7 @@ test("missing jj is a structured spawn failure, not an invented exit code", asyn
   assert.equal(output.stdout.complete, false);
 });
 
-test("byte and record bounds truthfully mark incomplete output without losing complete records", async (t) => {
+test("byte and record bounds truthfully mark incomplete output without losing complete records", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   harness.respond({ stdout: "abcdef😀xyz", stderr: "w".repeat(10_000) });
   const body = await harness.call({ operation: "file_show", revision: "@", path: "a" }, 8);
@@ -261,7 +263,7 @@ test("byte and record bounds truthfully mark incomplete output without losing co
   assert.partialDeepStrictEqual((await harness.call({ operation: "diff", comparison: { kind: "revisions", revset: "@" }, format: "files", limit: 1 })).structuredContent, { files: [changedFile], complete: false });
 });
 
-test("escaped model-facing JSON is bounded and recoverable without changing structured success or errors", async (t) => {
+test("escaped model-facing JSON is bounded and recoverable without changing structured success or errors", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   const body = '"\\\n'.repeat(10_000);
   for (const code of [0, 7]) {
@@ -283,7 +285,7 @@ test("escaped model-facing JSON is bounded and recoverable without changing stru
   }
 });
 
-test("cancellation prevents launch or terminates an active child and retains incomplete output", async (t) => {
+test("cancellation prevents launch or terminates an active child and retains incomplete output", { skip: posixFixtures, timeout: 30000 }, async (t) => {
   const harness = await setup(t);
   const pre = new AbortController();
   pre.abort();
@@ -304,7 +306,7 @@ test("cancellation prevents launch or terminates an active child and retains inc
   assert.equal(output.stdout.complete, false);
 });
 
-test("native codemode discovers jj and receives structured success and error values", async (t) => {
+test("native codemode discovers jj and receives structured success and error values", { skip: posixFixtures }, async (t) => {
   const harness = await setup(t);
   const codemodePath = fileURLToPath(new URL("./extensions/codemode/index.js", import.meta.resolve("@earendil-works/pi-coding-agent")));
   const loaded = await discoverAndLoadExtensions([codemodePath], harness.root, harness.root);

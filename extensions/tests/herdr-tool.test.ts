@@ -41,7 +41,7 @@ const truncationDetailsSchema = Type.Object({
 interface Step { stdout: string; stderr?: string; code?: number; delay_ms?: number; oversized?: boolean }
 
 // The fixture binaries record argv/stdin and return installed-CLI-shaped responses; no live Herdr is called.
-test("deferred Herdr tool contract and safety through native Pi", { timeout: 60000 }, async (t) => {
+test("deferred Herdr tool contract and safety through native Pi", { timeout: 60000, skip: process.platform === "win32" ? "fake herdr/ssh fixtures are POSIX shebang scripts and need zsh" : false }, async (t) => {
   const root = await mkdtemp(join(tmpdir(), "pi-herdr-tool-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const planPath = join(root, "plan.json");
