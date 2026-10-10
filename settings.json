@@ -13,8 +13,8 @@
     "opencode-go/claude-haiku-5-5"
   ],
   "hideThinkingBlock": false,
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-6.1-sol",
+  "defaultProvider": "claude-bridge",
+  "defaultModel": "claude-opus-5-5",
   "skills": [
     "./skills/",
     "./private-skills/"

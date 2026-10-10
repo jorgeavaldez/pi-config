@@ -1,6 +1,7 @@
 {
   "startupNoticeShown": "2026-10-10",
   "provider": {
+    "plan": "max",
     "pathToClaudeCodeExecutable": "claude"
   }
 }
