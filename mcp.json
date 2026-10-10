@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "ketch": {
+      "command": "fnox",
+      "args": [
+        "--config",
+        "~/.config/fnox/config.toml",
+        "--no-daemon",
+        "--non-interactive",
+        "exec",
+        "--",
+        "ketch",
+        "mcp",
+        "serve"
+      ],
+      "env": {
+        "KETCH_MCP_TOOLS": "search,code,scrape,crawl,tag"
+      },
+      "description": "Preferred web research tools: search the web, scrape known URLs, search public code, crawl sites, and bookmark sources. Use instead of the generic web-search tool; use the browser for interaction.",
+      "exposure": "deferred",
+      "toolExposure": {
+        "search": "direct",
+        "scrape": "direct"
+      }
+    }
+  }
+}
