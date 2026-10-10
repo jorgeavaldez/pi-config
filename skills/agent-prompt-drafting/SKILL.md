@@ -24,7 +24,10 @@ If the conversation or artifact he references is outside this session, read the 
 
 Aim for one bounded question or independently useful implementation outcome that fits a focused session.
 If the request bundles materially different outcomes, suggest a smaller first outcome for Jorge to choose.
-Do not make a recipient responsible for watching its own context usage.
+Never bundle implementation, audit, and exhaustive validation in a single prompt; split phases per the two-batch limit in the global `AGENTS.md`.
+Do not make a recipient responsible for watching its own context usage or deciding when to compact.
+Treat a recipient past ~70% context as unavailable for substantial new work; route the continuation to a fresh session with a concise handoff.
+The recipient sees only the prompt and the global `AGENTS.md`; loaded skills and compaction summaries do not carry over, so link plans, tickets, and files instead of assuming them.
 
 Usually 150–350 words is enough; use more only when the actual task needs it.
 Include:
@@ -45,12 +48,13 @@ Trust the recipient to inspect current source and choose the smallest correct im
 
 Include a relevant plan when it exists, even if the ticket is self-contained.
 For a local Obsidian plan, provide both a wikilink for Jorge and an absolute path the agent can read.
+Resolve the vault root as the `knowledge-base` skill does (an explicit path, a clearly identified current or ancestor vault, then `OBSIDIAN_VAULT_PATH`) and write the expanded path for this machine; never hardcode a vault location.
 Identify the relevant sections, including shared checks or exclusions when they matter.
 For example:
 
 ```text
 Plan: [[work/plans/example#3. History and results|History and results plan]]
-File: /Users/jorge/obsidian/delvaze/work/plans/example.md
+File: <expanded OBSIDIAN_VAULT_PATH>/work/plans/example.md
 Read §3 for this change and §5 for its checks.
 ```
 

@@ -204,6 +204,7 @@ herdr pane read "$pane" --source recent-unwrapped --lines 120
 ```
 
 `pane run` sends command text and Enter together.
+Panes start in Nushell (`default_shell = "nu"`), so text sent to a shell pane must be Nushell syntax; wrap a POSIX one-liner as `bash -c '...'`.
 For intentional raw input, `pane send-text` omits Enter and `pane send-keys` sends logical keys.
 
 `pane wait-output` searches the selected snapshot **immediately, including existing output**, then polls.

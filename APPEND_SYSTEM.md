@@ -5,10 +5,14 @@ If multiple clarifications are required, ask them in one concise message.
 
 ## Shell Execution
 
-- The shell tool is labeled `bash`, but on this machine pi is configured to execute commands via `/bin/zsh`.
-- pi also prefixes shell commands with `source ~/.zprofile >/dev/null 2>&1` before execution.
-- Keep this in mind for shell-specific behavior, startup environment, functions, aliases, and compatibility.
+- The `bash` tool executes through bash (Git Bash on Windows). Write bash there, not Nushell.
+- It inherits the environment of the process that launched pi and loads no Nushell or Zsh startup files, aliases, or functions.
 - You have access to `fd`, `ripgrep`, `ast-grep`, `jq`, etc. You should opt to use the optimized, fancy analogues of core code-exploration shell tools whenever possible
+
+## Browser Tool
+
+- The native browser tool is `agent_browser`. When no fetch tool is available, `args: ["read", "<url>"]` fetches page text without launching Chromium.
+- `open → snapshot → interact` applies to real browser workflows, not ordinary web research.
 
 ## Source Control Preference (Jujutsu)
 
