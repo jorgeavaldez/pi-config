@@ -26,7 +26,7 @@ Aim for one bounded question or independently useful implementation outcome that
 If the request bundles materially different outcomes, suggest a smaller first outcome for Jorge to choose.
 Never bundle implementation, audit, and exhaustive validation in a single prompt; split phases per the two-batch limit in the global `AGENTS.md`.
 Do not make a recipient responsible for watching its own context usage or deciding when to compact.
-Treat a recipient past ~70% context as unavailable for substantial new work; route the continuation to a fresh session with a concise handoff.
+Treat a recipient past ~180k tokens of context as unavailable for substantial new work; route the continuation to a fresh session with a concise handoff.
 The recipient sees only the prompt and the global `AGENTS.md`; loaded skills and compaction summaries do not carry over, so link plans, tickets, and files instead of assuming them.
 
 Usually 150–350 words is enough; use more only when the actual task needs it.

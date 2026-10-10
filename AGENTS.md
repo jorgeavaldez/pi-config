@@ -50,6 +50,12 @@ Treat tickets, product docs, specs, acceptance criteria, comments, plans, and ex
 - For a known public URL, use a fetch/text-retrieval tool. Do not open a browser merely to read documentation, articles, or raw source files.
 - Launch a browser only for interaction, authenticated content, rendered DOM or visual inspection, or when lightweight retrieval demonstrably fails. Prefer a native browser tool over shell-driven automation.
 - Load the `screenshot-review` skill before capturing screenshots for visual review.
+- Load the `browser-research` skill before multi-step browser research or when orchestrating browser agents.
+- Every agent browser session connects to Jorge's daily Chrome (`cdp` in `~/.agent-browser/config.json`); never launch a managed browser (`--profile`, `--headed`, `sessionMode: fresh`). Connecting needs remote debugging enabled at `chrome://inspect/#remote-debugging` plus Jorge's approval of Chrome's prompt; if it fails or times out, ask Jorge once instead of retrying in a loop.
+- Start with `--session <unique-task-name> --pin-tab tab new <url>`, then pass `--session <unique-task-name>` first on every later call, including `batch`. A bare call acts on Jorge's active tab.
+- Work only in tabs you opened and close only those (`tab close <id>`). Never close Jorge's browser or windows, or another agent's tabs or sessions. Leave captchas and logins to Jorge.
+- Keep every browser call under 25 seconds: repeat short `wait --fn` checks instead of long waits or polling `eval` promises. Longer calls time out and can restart the session's connection.
+- Run one agent per site at a time and pace searches; rapid bursts get blocked whatever the browser.
 
 ## Delegation
 

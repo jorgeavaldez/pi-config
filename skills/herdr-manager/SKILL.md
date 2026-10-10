@@ -103,11 +103,11 @@ Otherwise, context budgeting is the manager's responsibility for either harness.
 - Prefer a fresh session with a concise task-local handoff for a substantial new role, seam, batch, or validation pass.
 - For Pi, use `/tree` when exact earlier-session continuity is necessary. Use `/compact` only when Jorge explicitly requests it or a fresh task-local handoff cannot preserve required continuity. Do not send Pi commands to Claude Code.
 
-Do not assign substantial new work to a session near 50% context. Treat 70% as unavailable for further substantive work, not as a cue to compact and continue.
+Measure context in tokens, not percent; these thresholds hold on 1M-context models too. Do not assign substantial new work to a session near 128k tokens. Treat 180k as unavailable for further substantive work, not as a cue to compact and continue.
 
 ### In-flight monitoring
 
-For tasks expected to run long, poll the child's status and context pressure while it works; do not dispatch and walk away. If context climbs past ~50% with no working-copy deltas or verification output — typically a read/probe spiral — stop the child early, preserve any deltas, and re-dispatch a smaller seam with a tighter handoff. Never coax a spiraling session forward.
+For tasks expected to run long, poll the child's status and context pressure while it works; do not dispatch and walk away. If context climbs past ~128k tokens with no working-copy deltas, findings-file updates, or verification output — typically a read/probe spiral — stop the child early, preserve any deltas, and re-dispatch a smaller seam with a tighter handoff. Never coax a spiraling session forward.
 
 ## Delegation
 
