@@ -11,9 +11,9 @@ This skill owns command mechanics.
 
 ## Prefer the Herdr tool
 
-Discover the deferred `herdr` tool with `tool_search` (or codemode `searchTools("herdr")`), then read `describeNamespace("herdr")` for its on-demand instructions. Prefer `tools.herdr({ route, request })` for workspace/tab/pane inventories, pane/agent inspection and bounded reads, agent waits, and verified ready-agent prompts. Requests are operation-specific; results are structured success/error variants. A successful wait is not proof of task success; errors never authorize automatic resubmission.
+Use the deferred `herdr` tool for launching, prompting, waiting for and reading Pi or Claude Code task agents, for inventories, and for retiring task-owned layout. Find it with `tool_search` (or codemode `searchTools("herdr")`) and read `describeNamespace("herdr")` before the first call; those instructions own its semantics.
 
-Use the CLI mechanics below for unsupported operations such as authorized layout changes, startup, raw commands or interactive controls, or when the tool is unavailable. The same explicit routing, identity, readiness and result-handling policy applies to both surfaces.
+Use the CLI mechanics below only for what the tool lacks (pane splits, other harnesses or native agent options, session resume, closing a single pane, raw commands, interactive controls) or when the tool is unavailable. A `task_retire` refusal is not a missing operation: do not close that scope through the CLI.
 
 ## Choose the control route
 

@@ -26,6 +26,13 @@ Primary goals:
   command record, and clear attach/kill instructions.
 - Prefer reusable helper scripts for repeated workflows.
 
+## Use the `job` Tool When It Is Available
+
+In Pi, run background jobs with the deferred `job` tool; read its instructions
+with `describeNamespace("job")`. Run the launcher below by hand only where the
+tool does not exist (another harness, a plain host shell) or for what it does
+not cover, such as a custom readiness helper.
+
 ## Critical Rules
 
 1. **Do not run server/background/watch commands directly in the foreground**
@@ -47,8 +54,9 @@ Primary goals:
 
 1. **The command naturally exits**
    - Use `scripts/tmux-background.sh --wait exit -- <command...>`.
-   - The runner captures the process exit code, signals `tmux wait-for`, and
-     leaves the pane open for inspection.
+   - The runner records the exit code in `exit.status` and signals
+     `tmux wait-for`. The session ends with the command; `pane.log` keeps its
+     output.
 
 2. **The tool has a native wait/readiness flag**
    - Prefer native flags such as `--wait`, `--watch=false`, `docker compose up
@@ -95,11 +103,14 @@ scripts/tmux-background.sh \
   -- <command...>
 ```
 
-For complex shell commands, environment assignments, aliases/functions, pipes, or
-multiple commands, wrap the command explicitly:
+The command runs with the launcher's PATH, through `mise exec --` from the
+working directory when mise is on that PATH. For complex shell commands,
+environment assignments, functions, pipes, or multiple commands, wrap the
+command explicitly with `bash -c`, not `bash -lc` (a login shell can reorder
+PATH, as macOS bash does):
 
 ```bash
-... -- bash -lc 'source /path/to/helpers && ENV=local some-command --flag'
+... -- bash -c 'source /path/to/helpers && ENV=local some-command --flag'
 ```
 
 ### Examples
@@ -111,7 +122,7 @@ scripts/tmux-background.sh \
   --session tests-api \
   --cwd /path/to/repo \
   --wait exit \
-  -- bash -lc 'bun test tests/api.test.ts'
+  -- bash -c 'bun test tests/api.test.ts'
 ```
 
 Server with HTTP readiness:
@@ -123,7 +134,7 @@ scripts/tmux-background.sh \
   --wait http \
   --url http://127.0.0.1:3000/health \
   --timeout 90 \
-  -- bash -lc 'npm run dev'
+  -- bash -c 'npm run dev'
 ```
 
 Server with only a known port:
@@ -134,7 +145,7 @@ scripts/tmux-background.sh \
   --cwd /path/to/repo \
   --wait port \
   --port 8000 \
-  -- bash -lc 'python -m app'
+  -- bash -c 'python -m app'
 ```
 
 Server with log readiness:
@@ -145,7 +156,7 @@ scripts/tmux-background.sh \
   --cwd /path/to/repo \
   --wait log \
   --pattern 'Local:|ready in|listening on' \
-  -- bash -lc 'npm run dev'
+  -- bash -c 'npm run dev'
 ```
 
 Start without waiting when no useful signal exists:
@@ -155,7 +166,7 @@ scripts/tmux-background.sh \
   --session worker \
   --cwd /path/to/repo \
   --wait none \
-  -- bash -lc 'npm run worker'
+  -- bash -c 'npm run worker'
 ```
 
 ## Reusability Guidance
@@ -187,7 +198,7 @@ Reusable scripts should:
 
 | Script | Use | Notes |
 |---|---|---|
-| `scripts/tmux-background.sh` | Main launcher for tmux-backed background/server/batch commands. | Creates a detached session, attaches logging before command start, records metadata, waits via explicit readiness/completion signal, and leaves the session alive. |
+| `scripts/tmux-background.sh` | Main launcher for tmux-backed background/server/batch commands. | Creates a detached session that runs the command once logging is attached, records metadata, and waits via explicit readiness/completion signal. The session ends with the command; `pane.log` and `exit.status` stay. With `--detach` it returns once the command is started; readiness is still watched inside the session, and `ready.status` and `exit.status` in the audit directory (`--log-dir` fixes its path) carry the result. The `job` tool starts every job this way. |
 | `scripts/wait-for-http.sh` | Wait until an HTTP endpoint succeeds, optionally matching response content. | Used by launcher `--wait http`; can also be run standalone. Polling is contained inside the script with timeout diagnostics. |
 | `scripts/wait-for-port.sh` | Wait until a TCP host/port accepts connections. | Used by launcher `--wait port`; can also be run standalone. |
 | `scripts/pipe-pane-watch.sh` | `tmux pipe-pane` consumer that logs pane output and signals when a regex appears. | Used by launcher `--wait log`; strips ANSI before matching and keeps logging after readiness. |
@@ -210,6 +221,6 @@ After launching, tell the user:
 ```bash
 tmux has-session -t <session> 2>/dev/null && echo alive
 tail -f ~/.cache/pi/tmux-background/<session>-<timestamp>/pane.log
-tmux capture-pane -t <session> -p | tail -80
+cat ~/.cache/pi/tmux-background/<session>-<timestamp>/exit.status
 tmux kill-session -t <session>
 ```

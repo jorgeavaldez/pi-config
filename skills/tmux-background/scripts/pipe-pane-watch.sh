@@ -85,7 +85,7 @@ while IFS= read -r line; do
   printf '%s\n' "$line" >>"$log_file"
   if [ ! -e "$status_file" ]; then
     clean_line=$(printf '%s\n' "$line" | strip_ansi)
-    if printf '%s\n' "$clean_line" | grep -Eq "$pattern"; then
+    if printf '%s\n' "$clean_line" | grep -Eq -- "$pattern"; then
       signal_once 0 "Matched log readiness pattern: ${pattern}"
     fi
   fi

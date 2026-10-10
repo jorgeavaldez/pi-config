@@ -1,10 +1,10 @@
-import { spawn } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineTool, formatSize, truncateHead, type ExtensionAPI, type TruncationResult } from "@earendil-works/pi-coding-agent";
 import { Type, type Static, type TSchema } from "typebox";
 import { Check, Clean } from "typebox/value";
+import { execute, hostSchema, quote, ssh, transportSchema, type Transport } from "./shared/transport.js";
 
 const strict = { additionalProperties: false };
 const workspaceId = Type.String({ pattern: "^w[A-Za-z0-9]+$" });
@@ -44,14 +44,41 @@ const routeSchema = Type.Union([
   Type.Object({ kind: Type.Literal("local") }, strict),
   Type.Object({
     kind: Type.Literal("ssh"),
-    host: Type.String({ pattern: "^[A-Za-z0-9_][A-Za-z0-9_.@:\\[\\]-]*$", maxLength: 255 }),
+    host: hostSchema,
     session: Type.String({ pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*$", maxLength: 128 }),
   }, strict),
 ]);
 const readSource = Type.Union([Type.Literal("visible"), Type.Literal("recent"), Type.Literal("recent-unwrapped")]);
-const shortDeadline = Type.Integer({ minimum: 1, maximum: 30000, description: "Overall deadline in milliseconds, including route verification." });
-const waitDeadline = Type.Integer({ minimum: 1, maximum: 600000, description: "Overall deadline in milliseconds; allow transport overhead in the caller." });
+const shortDefaultMs = 15000;
+const waitDefaultMs = 600000;
+// agent_launch takes no timeout_ms: layout, a harness startup capped at launchStartupMs, and the verify
+// read share this budget, leaving 30s for the create/verify round trips and SSH connections.
+const launchBudgetMs = 90000;
+const launchStartupMs = 60000;
+const shortDeadline = Type.Optional(Type.Integer({ minimum: 1, maximum: 30000, description: `Overall deadline in milliseconds, including route verification. Default ${shortDefaultMs}.` }));
+const waitDeadline = Type.Optional(Type.Integer({ minimum: 1, maximum: 600000, description: `Overall deadline in milliseconds; allow transport overhead in the caller. Default ${waitDefaultMs}.` }));
 const readFields = { pane_id: paneId, source: readSource, lines: Type.Integer({ minimum: 1, maximum: 500 }), timeout_ms: shortDeadline };
+const promptText = Type.String({ minLength: 1, maxLength: 65536, pattern: "^[^\\u0000]+$" });
+// Follows --label: never option-shaped, never control characters.
+const label = Type.String({ maxLength: 64, pattern: "^[^-\\u0000-\\u001f][^\\u0000-\\u001f]*$" });
+const model = Type.String({ maxLength: 128, pattern: "^[A-Za-z0-9][A-Za-z0-9._:/@\\[\\]-]*$" });
+// The durable identity agent_prompt rechecks; agent_launch returns it ready to pass back.
+const expectedSchema = Type.Object({
+  workspace_id: workspaceId, terminal_id: Type.String({ minLength: 1 }),
+  cwd: Type.String({ minLength: 1 }), agent_session: sessionRef,
+}, strict);
+// Ownership handle: the scope to close and every terminal the task owns inside it, each with the
+// conversation occupying it (null only for a terminal with no agent).
+const retireFields = {
+  target: Type.Union([
+    Type.Object({ kind: Type.Literal("workspace"), workspace_id: workspaceId }, strict),
+    Type.Object({ kind: Type.Literal("tab"), workspace_id: workspaceId, tab_id: Type.String({ pattern: "^w[A-Za-z0-9]+:t[A-Za-z0-9]+$" }) }, strict),
+  ]),
+  panes: Type.Array(Type.Object({
+    pane_id: paneId, terminal_id: Type.String({ minLength: 1 }), agent_session: Type.Union([sessionRef, Type.Null()]),
+  }, strict), { minItems: 1, maxItems: 64 }),
+};
+const agentName = Type.String({ pattern: "^[a-z][a-z0-9_-]{0,31}$" });
 const requestSchema = Type.Union([
   Type.Object({ operation: Type.Literal("workspace_list"), timeout_ms: shortDeadline }, strict),
   Type.Object({ operation: Type.Literal("tab_list"), workspace_id: workspaceId, timeout_ms: shortDeadline }, strict),
@@ -63,25 +90,36 @@ const requestSchema = Type.Union([
   Type.Object({ operation: Type.Literal("agent_wait"), pane_id: paneId, timeout_ms: waitDeadline }, strict),
   Type.Object({
     operation: Type.Literal("agent_prompt"), pane_id: paneId, timeout_ms: waitDeadline,
-    text: Type.String({ minLength: 1, maxLength: 65536, pattern: "^[^\\u0000]+$" }),
-    expected: Type.Object({
-      workspace_id: workspaceId, terminal_id: Type.String({ minLength: 1 }),
-      cwd: Type.String({ minLength: 1 }), agent_session: sessionRef,
-    }, strict),
+    text: promptText, expected: expectedSchema,
   }, strict),
+  Type.Object({
+    operation: Type.Literal("agent_launch"),
+    location: Type.Union([
+      Type.Object({ kind: Type.Literal("workspace"), label }, strict),
+      Type.Object({ kind: Type.Literal("tab"), workspace_id: workspaceId, label }, strict),
+    ], { description: "Isolation choice: a new task workspace, or a new tab in the existing workspace that owns the task." }),
+    cwd: Type.String({ maxLength: 1024, pattern: "^(/|[A-Za-z]:[\\\\/])[^\\u0000-\\u001f]*$", description: "Absolute path on the routed host." }),
+    name: agentName,
+    harness: Type.Union([
+      Type.Object({ kind: Type.Literal("pi"), model }, strict),
+      Type.Object({
+        kind: Type.Literal("claude"), model,
+        intent: Type.Optional(Type.Union([Type.Literal("implementation"), Type.Literal("planning")], {
+          description: "implementation (default) starts Claude with --permission-mode auto; planning with --permission-mode plan.",
+        })),
+      }, strict),
+    ]),
+    task: Type.Optional(Type.Object({ text: promptText, timeout_ms: waitDeadline }, strict)),
+  }, strict),
+  Type.Object({ operation: Type.Literal("task_retire"), ...retireFields, timeout_ms: shortDeadline }, strict),
 ]);
 const parameters = Type.Object({ route: routeSchema, request: requestSchema }, strict);
 type Route = Static<typeof routeSchema>;
 const stageSchema = Type.Union([
   Type.Literal("routing"), Type.Literal("session_check"), Type.Literal("preflight"), Type.Literal("request"),
+  Type.Literal("layout"), Type.Literal("startup"), Type.Literal("verify"),
 ]);
 type Stage = Static<typeof stageSchema>;
-const transportSchema = Type.Object({
-  stdout: Type.String(), stderr: Type.String(), exit_code: Type.Union([Type.Integer(), Type.Null()]),
-  signal: nullableText, timed_out: Type.Boolean(), cancelled: Type.Boolean(),
-  output_limited: Type.Boolean(), spawn_error: nullableText,
-}, strict);
-type Transport = Static<typeof transportSchema>;
 const commandSchema = Type.Object({
   stage: stageSchema, exit_code: Type.Union([Type.Integer(), Type.Null()]), signal: nullableText,
   stderr: Type.String(),
@@ -96,20 +134,33 @@ const dataSchema = Type.Union([
   Type.Object({ operation: Type.Literal("agent_prompt"), agent, observation: Type.Literal("activity_observed_and_settled") }, strict),
   Type.Object({ operation: Type.Literal("pane_read"), pane_id: paneId, source: readSource, lines: Type.Integer(), text: Type.String() }, strict),
   Type.Object({ operation: Type.Literal("agent_read"), pane_id: paneId, source: readSource, lines: Type.Integer(), text: Type.String() }, strict),
+  Type.Object({
+    operation: Type.Literal("agent_launch"), agent, expected: Type.Union([expectedSchema, Type.Null()]),
+    retire: Type.Object(retireFields, strict),
+    task: Type.Union([Type.Literal("not_requested"), Type.Literal("activity_observed_and_settled")]),
+  }, strict),
+  Type.Object({ operation: Type.Literal("task_retire"), ...retireFields }, strict),
 ]);
+// What a failed launch left behind. Nothing is rolled back; retire is the explicit cleanup handle.
+const recoverySchema = Type.Object({ retire: Type.Object(retireFields, strict), agent_name: agentName }, strict);
+// Every state-changing command the call may send. uncertain: sent, outcome not confirmed.
+const effect = Type.Union([Type.Literal("not_attempted"), Type.Literal("uncertain"), Type.Literal("applied")]);
+const mutationsSchema = Type.Object({ layout: effect, agent_start: effect, submission: effect, close: effect }, strict);
+type Mutations = Static<typeof mutationsSchema>;
 const operationSchema = Type.Union([
   Type.Literal("workspace_list"), Type.Literal("tab_list"), Type.Literal("pane_list"),
   Type.Literal("pane_get"), Type.Literal("pane_read"), Type.Literal("agent_get"),
   Type.Literal("agent_read"), Type.Literal("agent_wait"), Type.Literal("agent_prompt"),
+  Type.Literal("agent_launch"), Type.Literal("task_retire"),
 ]);
 const outputSchema = Type.Union([
   Type.Object({ ok: Type.Literal(true), route: routeSchema, data: dataSchema, commands: Type.Array(commandSchema) }, strict),
   Type.Object({
     ok: Type.Literal(false), route: routeSchema, operation: operationSchema,
     error: Type.Object({
-      code: Type.String(), message: Type.String(), stage: stageSchema,
-      submission: Type.Union([Type.Literal("not_attempted"), Type.Literal("uncertain")]),
+      code: Type.String(), message: Type.String(), stage: stageSchema, mutations: mutationsSchema,
       transport: Type.Union([transportSchema, Type.Null()]),
+      recovery: Type.Union([recoverySchema, Type.Null()]),
     }, strict), commands: Type.Array(commandSchema),
   }, strict),
 ]);
@@ -121,6 +172,9 @@ const panesEnvelope = Type.Object({ id: Type.String(), result: Type.Object({ typ
 const paneEnvelope = Type.Object({ id: Type.String(), result: Type.Object({ type: Type.Literal("pane_info"), pane }, strict) }, strict);
 const agentEnvelope = Type.Object({ id: Type.String(), result: Type.Object({ type: Type.Literal("agent_info"), agent }, strict) }, strict);
 const promptedEnvelope = Type.Object({ id: Type.String(), result: Type.Object({ type: Type.Literal("agent_prompted"), agent }, strict) }, strict);
+const createdEnvelope = Type.Object({ id: Type.String(), result: Type.Object({ type: Type.Union([Type.Literal("workspace_created"), Type.Literal("tab_created")]), root_pane: pane }, strict) }, strict);
+const startedEnvelope = Type.Object({ id: Type.String(), result: Type.Object({ type: Type.Literal("agent_started"), agent }, strict) }, strict);
+const closedEnvelope = Type.Object({ id: Type.String(), result: Type.Object({ type: Type.Literal("ok") }, strict) }, strict);
 
 // A failure keeps command evidence; in particular, cancellation cannot be mistaken for exit zero.
 class HerdrFailure extends Error {
@@ -140,82 +194,57 @@ function decode<T extends TSchema>(schema: T, text: string, transport: Transport
   return value;
 }
 
-function quote(value: string): string {
-  return `'${value.replace(/'/g, "'\\''")}'`;
+type Session = Static<typeof sessionRef>;
+
+function sameSession(expected: Session, current: Session | null | undefined): boolean {
+  return current != null && current.value === expected.value && current.kind === expected.kind &&
+    current.agent === expected.agent && current.source === expected.source;
 }
 
 type Argument = string | { prompt: string };
 
-// pi.exec has no stdin transport. A prompt argument is argv locally, stdin remotely, never shell source.
-async function transport(route: Route, args: Argument[], timeout: number, signal: AbortSignal | undefined): Promise<Transport> {
-  const result: Transport = {
-    stdout: "", stderr: "", exit_code: null, signal: null,
-    timed_out: false, cancelled: false, output_limited: false, spawn_error: null,
-  };
-  if (signal?.aborted) return { ...result, cancelled: true };
-  let executable = "herdr";
-  let argv = args.map((arg) => typeof arg === "string" ? arg : arg.prompt);
-  let input = "";
-  if (route.kind === "ssh") {
-    executable = "ssh";
-    const prompt = args.find((arg) => typeof arg !== "string");
-    const inner = ["herdr", ...args].map((arg) => typeof arg === "string" ? quote(arg) : '"$prompt"').join(" ");
-    // read preserves quotes, substitutions, multiline text and trailing newlines; EOF is expected.
-    const script = prompt === undefined ? `exec ${inner}` : `IFS= read -r -d '' prompt || [[ -n "$prompt" ]] || exit 2; exec ${inner}`;
-    argv = ["-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "--", route.host, `zsh -lic ${quote(script)}`];
-    input = prompt?.prompt ?? "";
-  }
-  return new Promise((resolve) => {
-    const child = spawn(executable, argv, { stdio: ["pipe", "pipe", "pipe"] });
-    const abort = () => { result.cancelled = true; child.kill("SIGKILL"); };
-    const timer = setTimeout(() => { result.timed_out = true; child.kill("SIGKILL"); }, timeout);
-    signal?.addEventListener("abort", abort, { once: true });
-    if (signal?.aborted) abort();
-    const capture = (key: "stdout" | "stderr", chunk: string) => {
-      // Bound both diagnostics and reads, including a single unusually long terminal line.
-      const room = 262144 - result[key].length;
-      result[key] += chunk.slice(0, Math.max(0, room));
-      if (chunk.length > room) { result.output_limited = true; child.kill("SIGKILL"); }
-    };
-    child.stdout.setEncoding("utf8").on("data", (chunk: string) => capture("stdout", chunk));
-    child.stderr.setEncoding("utf8").on("data", (chunk: string) => capture("stderr", chunk));
-    child.on("error", (error) => { result.spawn_error = error.message; });
-    // An early remote exit can close stdin before the prompt is written (EPIPE).
-    child.stdin.on("error", (error) => { result.spawn_error ??= error.message; });
-    child.on("close", (code, exitSignal) => {
-      clearTimeout(timer);
-      signal?.removeEventListener("abort", abort);
-      result.exit_code = code;
-      result.signal = exitSignal;
-      resolve(result);
-    });
-    child.stdin.end(input);
-  });
+// A prompt argument is argv locally, stdin remotely, never shell source.
+function transport(route: Route, args: Argument[], timeout: number, signal: AbortSignal | undefined): Promise<Transport> {
+  if (route.kind === "local") return execute("herdr", args.map((arg) => typeof arg === "string" ? arg : arg.prompt), "", timeout, signal);
+  const prompt = args.find((arg) => typeof arg !== "string");
+  const inner = ["herdr", ...args].map((arg) => typeof arg === "string" ? quote(arg) : '"$prompt"').join(" ");
+  // read preserves quotes, substitutions, multiline text and trailing newlines; EOF is expected.
+  const { executable, argv } = ssh(route.host, prompt === undefined ? `exec ${inner}` : `IFS= read -r -d '' prompt || [[ -n "$prompt" ]] || exit 2; exec ${inner}`);
+  return execute(executable, argv, prompt?.prompt ?? "", timeout, signal);
 }
 
-const instructions = `Use tools.herdr({route, request}); every request has operation and timeout_ms.
-Local requires inherited HERDR_ENV=1 and HERDR_SOCKET_PATH. SSH requires the user-authorized exact host and named running session; the tool verifies it before every call. No fallback, focus changes, creation, startup, shell commands or send-keys.
-List workspaces only to locate the task; tab_list/pane_list require workspace_id. All pane/agent operations require a live pane_id, not focus, an agent name or a Pi session UUID. Reads require source and lines (1–500); prefer recent-unwrapped. Lists/gets/reads allow at most 30s; waits/prompts at most 600s. Allow an extra second of transport cleanup plus caller overhead.
-Before agent_prompt, get/read the target, consume previous results, verify task ownership and a clean input box. Supply expected workspace_id, terminal_id, cwd and the complete agent_session from agent_get. The tool rechecks identity, interactive readiness and idle/done, then always uses --wait with default settled states and activity detection. It rejects targets observed as working/blocked/unknown at preflight and never prompts itself locally. Preflight is not an atomic reservation and CLI waits are not turn-correlated; keep one dispatcher per target.
-Success is a lifecycle observation, not task success. Read the actual result; blocked requires a decision. agent_wait observes current state and may immediately match never-prompted idle: use it only for an already-submitted task whose activity was confirmed. On any error/timeout/cancellation/stall, inspect identity/state/output; delivery may be uncertain. Never automatically resend or infer completion. Results are validated ok:true data or ok:false error variants; commands preserve stderr/exit status. Model-facing text is limited to 50KB/2000 lines with a full-output recovery path when truncated; codemode retains the complete structured result. Use the Herdr skill's CLI route for unsupported operations, retaining its safety policy.`;
+const instructions = `Call tools.herdr({route, request}). route is {kind:"local"} (needs inherited HERDR_ENV=1 and HERDR_SOCKET_PATH) or {kind:"ssh", host, session} for the exact host and running named session the user authorized. timeout_ms is optional; the schema states each default.
+Operations:
+- agent_launch {location, cwd, name, harness, task?:{text}}: only for authorized new layout. location is {kind:"workspace", label} or {kind:"tab", workspace_id, label} in the workspace that owns the task; cwd is absolute on that host. harness is {kind:"pi", model} or {kind:"claude", model, intent?}; set intent "planning" only when a plan is all that is wanted. Creates the unfocused location, starts and verifies the agent, then submits task if given. Returns agent, expected (pass to agent_prompt), retire (pass to task_retire) and task; "not_requested" means nothing was delegated.
+- agent_prompt {pane_id, text, expected}: first agent_get/agent_read the target and consume its previous result. Submits only to the verified idle/done agent, then waits until it settles.
+- agent_wait {pane_id}: only after a submission whose activity was confirmed; it returns at once for an idle agent.
+- agent_get/pane_get {pane_id}; agent_read/pane_read {pane_id, source, lines 1-500}, preferring source "recent-unwrapped"; workspace_list; tab_list/pane_list {workspace_id}. pane_id is a live id such as "w1:p2", never focus, an agent name or a session UUID.
+- task_retire {target, panes}: closes one task-owned workspace or tab. Pass the launch's retire; when several launches share the scope, concatenate their retire.panes. It closes only when those are exactly the live terminals, all idle/done, each holding its declared conversation.
+Success means the agent settled, not that the task succeeded: read the result; "blocked" needs a decision.
+On any error, inspect with agent_get/pane_list (workspace_list/tab_list by label when error.recovery is null after an uncertain layout) before acting. Never retry a mutation that error.mutations reports as "uncertain" or "applied". After a failed launch, error.recovery.retire is the handle for what it created. Never rebuild or edit a retire handle to force a close. A task_retire refusal is a decision for the user, not an unsupported operation: never close that scope with CLI workspace close/tab close.
+agent_session_unreported (or expected: null from agent_launch) means the harness's Herdr integration on that host reports no conversation, so this tool will not prompt or retire that agent: report it to the user.
+Use the Herdr CLI only for what this tool lacks: pane splits, other harnesses or native options, session resume, closing a single pane.`;
 
 export default function (pi: ExtensionAPI) {
   pi.registerTool(defineTool({
     name: "herdr", label: "Herdr", exposure: "deferred",
     namespace: { name: "herdr", description: "Herdr workspace, pane and agent control.", instructions },
-    description: "Inspect Herdr workspaces/tabs/panes and safely read, wait for or prompt verified agents locally or in an exact SSH session.",
+    description: "Launch a task agent in a new Herdr workspace or tab, prompt/wait for/read verified agents, inspect workspaces/tabs/panes and retire task-owned layout, locally or in an exact SSH session.",
     parameters, outputSchema,
     async execute(_id, { route, request }, signal) {
       const commands: Static<typeof commandSchema>[] = [];
       let stage: Stage = "routing";
-      let submission: "not_attempted" | "uncertain" = "not_attempted";
-      const deadline = Date.now() + request.timeout_ms;
-      const run = async (args: Argument[]): Promise<Transport> => {
+      const mutations: Mutations = { layout: "not_attempted", agent_start: "not_attempted", submission: "not_attempted", close: "not_attempted" };
+      let recovery: Static<typeof recoverySchema> | null = null;
+      // Launch owns its layout/startup budget; the optional task then gets its own wait deadline.
+      let deadline = Date.now() + (request.operation === "agent_launch" ? launchBudgetMs
+        : request.timeout_ms ?? (request.operation === "agent_wait" || request.operation === "agent_prompt" ? waitDefaultMs : shortDefaultMs));
+      const run = async (args: Argument[], mutation?: keyof Mutations): Promise<Transport> => {
         const remaining = deadline - Date.now();
         if (signal?.aborted) throw new HerdrFailure("cancelled", "Herdr call was cancelled before this command started.");
         if (remaining <= 0) throw new HerdrFailure("timeout", "Herdr call deadline expired before this command started.");
         const scoped = route.kind === "ssh" && stage !== "session_check" ? ["--session", route.session, ...args] : args;
-        if (args.some((arg) => typeof arg !== "string")) submission = "uncertain";
+        if (mutation) mutations[mutation] = "uncertain";
         const result = await transport(route, scoped, remaining + 1000, signal);
         commands.push({ stage, exit_code: result.exit_code, signal: result.signal, stderr: result.stderr });
         if (result.cancelled) throw new HerdrFailure("cancelled", "Herdr command was cancelled; any submitted prompt may still be running.", result);
@@ -231,9 +260,21 @@ export default function (pi: ExtensionAPI) {
         if (Date.now() > deadline) throw new HerdrFailure("timeout", "Herdr command returned after the requested deadline; this is not completion.", result);
         return result;
       };
-      const json = async <T extends TSchema>(args: Argument[], schema: T): Promise<Static<T>> => {
-        const result = await run(args);
-        return decode(schema, result.stdout, result);
+      const json = async <T extends TSchema>(args: Argument[], schema: T, mutation?: keyof Mutations): Promise<Static<T>> => {
+        const result = await run(args, mutation);
+        const value = decode(schema, result.stdout, result);
+        if (mutation) mutations[mutation] = "applied";
+        return value;
+      };
+      const submit = async (current: Static<typeof agent>, session: Session, text: string) => {
+        stage = "request";
+        const response = await json(["agent", "prompt", current.pane_id, { prompt: text }, "--wait", "--timeout", String(Math.max(1, deadline - Date.now()))], promptedEnvelope, "submission");
+        const settled = response.result.agent;
+        if (settled.pane_id !== current.pane_id || settled.terminal_id !== current.terminal_id ||
+            !sameSession(session, settled.agent_session) || !["idle", "done", "blocked"].includes(settled.agent_status)) {
+          throw new HerdrFailure("identity_or_state_changed", "Prompt wait returned another identity or a non-settled state.");
+        }
+        return settled;
       };
       const report = async (output: Static<typeof outputSchema>) => {
         const fullText = JSON.stringify(output, null, 2);
@@ -315,27 +356,103 @@ export default function (pi: ExtensionAPI) {
             if (route.kind === "local" && request.pane_id === process.env.HERDR_PANE_ID) throw new HerdrFailure("self_prompt", "Cannot prompt the local coordinating pane.");
             const { result: { agent: current } } = await json(["agent", "get", request.pane_id], agentEnvelope);
             const expected = request.expected;
-            const session = current.agent_session;
+            if (current.pane_id === request.pane_id && !current.agent_session) {
+              throw new HerdrFailure("agent_session_unreported", "Herdr reports no agent session for this pane, so the conversation cannot be verified. The harness's Herdr integration must report it; this tool does not install integrations.");
+            }
             if (current.pane_id !== request.pane_id || current.workspace_id !== expected.workspace_id ||
-                current.terminal_id !== expected.terminal_id || current.cwd !== expected.cwd || !session ||
-                current.agent !== expected.agent_session.agent || session.agent !== expected.agent_session.agent ||
-                session.kind !== expected.agent_session.kind || session.source !== expected.agent_session.source ||
-                session.value !== expected.agent_session.value) {
+                current.terminal_id !== expected.terminal_id || current.cwd !== expected.cwd ||
+                current.agent !== expected.agent_session.agent || !sameSession(expected.agent_session, current.agent_session)) {
               throw new HerdrFailure("identity_changed", "Target pane, cwd or agent session differs from the verified target.");
             }
             if (!["idle", "done"].includes(current.agent_status) || current.interactive_ready !== true || current.launch_pending === true) {
               throw new HerdrFailure("agent_not_ready", "Target must be interactive-ready and idle/done before prompting.");
             }
-            stage = "request";
-            const response = await json(["agent", "prompt", request.pane_id, { prompt: request.text }, "--wait", "--timeout", String(Math.max(1, deadline - Date.now()))], promptedEnvelope);
-            const settled = response.result.agent;
-            if (settled.pane_id !== current.pane_id || settled.terminal_id !== current.terminal_id ||
-                settled.agent_session?.value !== session.value || settled.agent_session?.kind !== session.kind ||
-                settled.agent_session?.agent !== session.agent || settled.agent_session?.source !== session.source ||
-                !["idle", "done", "blocked"].includes(settled.agent_status)) {
-              throw new HerdrFailure("identity_or_state_changed", "Prompt wait returned another identity or a non-settled state.");
+            data = { operation: request.operation, agent: await submit(current, expected.agent_session, request.text), observation: "activity_observed_and_settled" };
+            break;
+          }
+          case "agent_launch": {
+            stage = "layout";
+            const { location, harness } = request;
+            const place = ["--cwd", request.cwd, "--label", location.label, "--no-focus"];
+            const { result: { root_pane: root } } = await json(location.kind === "workspace"
+              ? ["workspace", "create", ...place] : ["tab", "create", "--workspace", location.workspace_id, ...place], createdEnvelope, "layout");
+            const target = location.kind === "workspace" ? { kind: location.kind, workspace_id: root.workspace_id }
+              : { kind: location.kind, workspace_id: root.workspace_id, tab_id: root.tab_id };
+            // Until the started agent's identity is verified, the handle describes the bare terminal.
+            recovery = { retire: { target, panes: [{ pane_id: root.pane_id, terminal_id: root.terminal_id, agent_session: null }] }, agent_name: request.name };
+            if (location.kind === "tab" && root.workspace_id !== location.workspace_id) throw new HerdrFailure("target_mismatch", "Tab was created in another workspace.");
+            stage = "startup";
+            const native = harness.kind === "claude" ? ["--permission-mode", harness.intent === "planning" ? "plan" : "auto"] : [];
+            // A new pane rejects agent start with agent_pane_busy until its shell reaches the prompt. That
+            // rejection starts nothing, so it is retried within the launch budget.
+            let started: Static<typeof agent>;
+            for (;;) {
+              try {
+                ({ result: { agent: started } } = await json(["agent", "start", request.name, "--kind", harness.kind, "--pane", root.pane_id,
+                  "--timeout", String(Math.min(launchStartupMs, Math.max(1, deadline - Date.now()))), "--", "--model", harness.model, ...native], startedEnvelope, "agent_start"));
+                break;
+              } catch (error) {
+                if (!(error instanceof HerdrFailure) || error.code !== "agent_pane_busy") throw error;
+                mutations.agent_start = "not_attempted";
+                if (deadline - Date.now() < 1000) throw error;
+                await new Promise((resolve) => setTimeout(resolve, 500));
+              }
             }
-            data = { operation: request.operation, agent: settled, observation: "activity_observed_and_settled" };
+            stage = "verify";
+            const { result: { agent: current } } = await json(["agent", "get", root.pane_id], agentEnvelope);
+            const session = current.agent_session ?? null;
+            if (started.pane_id !== root.pane_id || started.terminal_id !== root.terminal_id || current.pane_id !== root.pane_id ||
+                current.terminal_id !== root.terminal_id || current.workspace_id !== root.workspace_id || current.tab_id !== root.tab_id ||
+                current.agent !== harness.kind || (session !== null && session.agent !== harness.kind)) {
+              throw new HerdrFailure("identity_changed", "The started agent is not the requested harness in the created terminal and location.");
+            }
+            const retire = { target, panes: [{ pane_id: current.pane_id, terminal_id: current.terminal_id, agent_session: session }] };
+            recovery = { retire, agent_name: request.name };
+            // Separator and drive-letter spelling may differ; anything else is another directory.
+            const canonical = (path: string) => (/^[A-Za-z]:/.test(path) ? path.toLowerCase().replaceAll("/", "\\") : path).replace(/(?<=.)[\\/]+$/, "");
+            if (!current.cwd || canonical(current.cwd) !== canonical(request.cwd)) {
+              throw new HerdrFailure("cwd_mismatch", `The started agent reports cwd ${current.cwd ?? "(none)"}, not the requested ${request.cwd}. Pass the path as the host resolves it.`);
+            }
+            if (!["idle", "done"].includes(current.agent_status) || current.interactive_ready !== true || current.launch_pending === true) {
+              throw new HerdrFailure("agent_not_ready", "The started agent is not interactive-ready and idle/done.");
+            }
+            const expected = session ? { workspace_id: current.workspace_id, terminal_id: current.terminal_id, cwd: current.cwd, agent_session: session } : null;
+            if (!request.task) {
+              data = { operation: request.operation, agent: current, expected, retire, task: "not_requested" };
+              break;
+            }
+            if (!expected) {
+              throw new HerdrFailure("agent_session_unreported", "The agent started, but Herdr reports no agent session for it, so the task was not submitted. The harness's Herdr integration must report it; this tool does not install integrations.");
+            }
+            deadline = Date.now() + (request.task.timeout_ms ?? waitDefaultMs);
+            data = { operation: request.operation, agent: await submit(current, expected.agent_session, request.task.text), expected, retire, task: "activity_observed_and_settled" };
+            break;
+          }
+          case "task_retire": {
+            stage = "preflight";
+            const { target, panes } = request;
+            const { result: { panes: live } } = await json(["pane", "list", "--workspace", target.workspace_id], panesEnvelope);
+            if (live.some((pane) => pane.workspace_id !== target.workspace_id)) throw new HerdrFailure("target_mismatch", "Pane list returned another workspace.");
+            const scoped = target.kind === "workspace" ? live : live.filter((pane) => pane.tab_id === target.tab_id);
+            if (route.kind === "local" && scoped.some((pane) => pane.pane_id === process.env.HERDR_PANE_ID)) throw new HerdrFailure("self_retire", "Cannot retire the scope containing the local coordinating pane.");
+            if (scoped.length !== panes.length || !scoped.every((pane) => panes.some((owned) => owned.pane_id === pane.pane_id && owned.terminal_id === pane.terminal_id))) {
+              throw new HerdrFailure("ownership_mismatch", "The live terminals in this scope are not exactly the declared task-owned panes; nothing was closed.");
+            }
+            if (scoped.some((pane) => pane.agent_status !== "idle" && pane.agent_status !== "done")) {
+              throw new HerdrFailure("agent_not_settled", "A pane in this scope is working, blocked or in an unknown state; nothing was closed.");
+            }
+            if (scoped.some((pane) => pane.agent != null && !pane.agent_session)) {
+              throw new HerdrFailure("agent_session_unreported", "An agent in this scope reports no agent session, so its conversation cannot be verified as the task's; nothing was closed. The harness's Herdr integration must report it; this tool does not install integrations.");
+            }
+            for (const pane of scoped) {
+              const declared = panes.find((owned) => owned.pane_id === pane.pane_id)?.agent_session ?? null;
+              if (declared === null ? pane.agent_session != null : !sameSession(declared, pane.agent_session)) {
+                throw new HerdrFailure("conversation_changed", "A terminal in this scope is occupied by another conversation than the declared one; nothing was closed.");
+              }
+            }
+            stage = "request";
+            await json(target.kind === "workspace" ? ["workspace", "close", target.workspace_id] : ["tab", "close", target.tab_id], closedEnvelope, "close");
+            data = { operation: request.operation, target, panes };
             break;
           }
         }
@@ -345,8 +462,8 @@ export default function (pi: ExtensionAPI) {
           ok: false, route, operation: request.operation,
           error: {
             code: error instanceof HerdrFailure ? error.code : "internal_error",
-            message: error instanceof Error ? error.message : String(error), stage, submission,
-            transport: error instanceof HerdrFailure ? error.transport : null,
+            message: error instanceof Error ? error.message : String(error), stage, mutations,
+            transport: error instanceof HerdrFailure ? error.transport : null, recovery,
           }, commands,
         });
       }

@@ -54,7 +54,8 @@ printf 'Waiting for TCP %s:%s (timeout=%ss)\n' "$host" "$port" "$timeout"
 
 while :; do
   attempts=$((attempts + 1))
-  if nc -z -w 1 "$host" "$port" >/dev/null 2>&1; then
+  # bash's own /dev/tcp needs no nc; the subshell closes the connection again.
+  if (exec 3<>"/dev/tcp/$host/$port") 2>/dev/null; then
     elapsed=$(( $(date +%s) - start ))
     printf 'TCP %s:%s is accepting connections after %ss (%s attempts)\n' \
       "$host" "$port" "$elapsed" "$attempts"

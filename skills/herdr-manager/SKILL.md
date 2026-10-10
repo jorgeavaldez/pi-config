@@ -34,7 +34,7 @@ Do not change an existing task owner or the default agent choice merely because 
 Before the first Claude dispatch on the selected host, check `claude --version`, `claude auth status`, and the installed `herdr agent start --help` through that host's login shell.
 Reuse a working Claude login; do not reinstall or start reauthentication when it is already signed in.
 
-Use the `herdr` skill's normal start/prompt/wait workflow with `--kind claude`; pass any native Claude options after `--`.
+Launch Claude with the Herdr tool's `agent_launch`. Use the `herdr` skill's CLI start with `--kind claude` only when native Claude options the tool lacks are required; pass them after `--` with `--permission-mode auto`, or `plan` when a plan is all Jorge wants.
 Keep the authorized Herdr and jj workspace layout; do not add Claude's `--worktree` or `--tmux` as an alternative isolation mechanism.
 Do not enable blanket permission bypass to get past startup or tool approvals.
 Pass applicable `AGENTS.md` and `CLAUDE.md` paths, task permissions, and jj-only source-control requirements to `agent-prompt-drafting`; Claude does not inherit the coordinator's global Pi instructions.
@@ -61,7 +61,7 @@ Use `herdr pane read <pane> --source recent-unwrapped --lines 80` only when need
 
 Herdr state is concurrent and user-controlled; expect workspaces, tabs, panes, focus, and agent status to change between commands. Immediately before a control action, refresh the known target with the applicable exact commands (`workspace get`, `tab get`, `pane get`, and `agent get`); fall back to a workspace-scoped list when an exact lookup is unavailable or the mapping is ambiguous. Rerun the scoped topology lists after a topology change or when an ID, owner, or task mapping may have changed.
 
-Do not batch a state refresh with a hard-coded action or treat a successful lookup as verification without checking its result. Parse newly created IDs from the creation response, then verify the new target before prompting or starting dependent work. If the target changed or disappeared, stop and resolve the live mapping again.
+Do not batch a state refresh with a hard-coded action or treat a successful lookup as verification without checking its result. Keep the `expected` and `retire` handles that `agent_launch` returns in the task mapping rather than re-deriving IDs. On the CLI route, parse newly created IDs from the creation response, then verify the new target before prompting or starting dependent work. If the target changed or disappeared, stop and resolve the live mapping again.
 
 Never rely on remembered pane IDs, tab numbers, status, cwd, or revisions. If multiple live targets fit the user's reference, name them and ask.
 
@@ -75,6 +75,7 @@ Never rely on remembered pane IDs, tab numbers, status, cwd, or revisions. If mu
 - Keep bookkeeping in the appropriate vault/bookkeeping context.
 - Never send a prompt to a `working` agent unless the user explicitly asks to interrupt.
 - Confirm the target is ready (`idle` or `done`), consume any previous result, and clear staged input before sending; never append to existing input.
+- Retire task-owned layout only when Jorge asks for that cleanup and after its results are consumed. Report a failed launch or a `task_retire` refusal to Jorge and let him decide what happens next.
 
 ### Proportional orchestration
 
@@ -118,7 +119,7 @@ Before delegating:
 3. Confirm any requested workspace creation, reuse, or source-control operation is authorized.
 4. For parallel work, confirm the seams are independent and identify the integration owner and order.
 5. Load `agent-prompt-drafting` and give it the routing facts.
-6. Revalidate the live target, confirm it is ready (`idle` or `done`) with any previous result consumed and a clean input box, then submit through the agent surface using the `herdr` skill's start/prompt/wait workflow.
+6. For a fresh task agent in authorized new layout, submit with `agent_launch` and its `task`. For an existing owner, revalidate the live target, confirm it is ready (`idle` or `done`) with any previous result consumed and a clean input box, then submit with `agent_prompt`.
 7. Distinguish agent startup, task submission, observed activity, and the actual result. Do not report a task as delegated merely because a fresh agent launched, or as completed merely because a wait returned. Use the `herdr` skill's submission-and-wait operation by default; for separate asynchronous dispatch, confirm activity before waiting on the task.
 
 For plan-based parallel work, pass only the shared plan anchor, sibling seam map, this agent's owned seam, required inputs, and integration owner. Do not duplicate prompt policy or sibling history here.

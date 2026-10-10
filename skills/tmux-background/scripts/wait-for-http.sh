@@ -67,7 +67,7 @@ while :; do
   attempts=$((attempts + 1))
   : >"$last_error_file"
   if curl -fsS --max-time "$curl_timeout" "$url" >"$last_body_file" 2>"$last_error_file"; then
-    if [ -z "$expect_regex" ] || grep -Eq "$expect_regex" "$last_body_file"; then
+    if [ -z "$expect_regex" ] || grep -Eq -- "$expect_regex" "$last_body_file"; then
       elapsed=$(( $(date +%s) - start ))
       printf 'HTTP %s is ready after %ss (%s attempts)\n' "$url" "$elapsed" "$attempts"
       exit 0
