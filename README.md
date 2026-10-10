@@ -35,10 +35,6 @@ Prompt editing uses temporary files independently of the vault.
 
 Provides Exa-backed `websearch` and `webfetch` tools for real-time web search and page fetching.
 
-### notification
-
-Sends a desktop notification when an agent run fully settles outside Herdr. It also warns when the agent requests a potentially dangerous shell command.
-
 ### editor-open
 
 Adds a custom `Ctrl+G` workflow for drafting prompts in your editor with reference context.
