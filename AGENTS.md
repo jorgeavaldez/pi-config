@@ -61,6 +61,14 @@ Treat tickets, product docs, specs, acceptance criteria, comments, plans, and ex
 
 Load the `agent-prompt-drafting` skill before instructing another agent, and `herdr-manager` when routing to Herdr panes. One bounded outcome per prompt; context budgeting is the delegator's job, never the recipient's.
 
+### Orchestrator resume file
+
+When orchestrating work across agents or sessions, keep one resume file for the overall effort (a research folder's `progress.md`, or the task's progress or plan note). Jorge must be able to point a fresh agent at it and have it continue without the chat.
+
+- Keep a `## Resume here` section at the top: read order, current state with booking or confirmation IDs, live workers/sessions/tabs, ordered to-dos with owners, open decisions, budgets or totals, and operating gotchas.
+- Update it at every milestone and before ending a turn that changed state. Replace stale state in place; history goes in a log below it.
+- Workers write only their own findings; the orchestrator owns the resume file.
+
 ## Code Quality
 
 Load the `code-quality` skill before writing or reviewing non-trivial code; it owns the full rules. Always, in every language:

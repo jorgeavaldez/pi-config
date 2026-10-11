@@ -16,7 +16,7 @@ Every tool call resends the whole conversation. Browser work is many small steps
 
 1. **Research folder.** One folder per research task:
    - `brief.md`: goal, constraints, and Jorge's binding decisions. Mark "typically/likely/(verify)" claims as unverified.
-   - `progress.md`: worker status and the shared findings format (table columns, units, verified-vs-assumed labeling).
+   - `progress.md`: the orchestrator resume file (see AGENTS.md "Orchestrator resume file"), worker status, and the shared findings format (table columns, units, verified-vs-assumed labeling).
    - `findings/<worker>.md`: one per worker, written only by that worker.
 2. **Preflight once, before any dispatch.** Run `--session <task>-preflight --pin-tab tab new <first site>`, then `get url`, then close that tab. Then list every login the scope needs and ask Jorge for all of them in one message. Dispatch only after the connection works and the logins are done; workers must not discover setup problems one at a time.
 3. **Split by site, not by category.** Give each worker a scope that fits about 128k tokens of context, e.g. one airline or points program rather than "all cash prices". One agent per site at a time.
