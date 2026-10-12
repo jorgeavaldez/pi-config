@@ -100,15 +100,15 @@ Otherwise, context budgeting is the manager's responsibility for either harness.
 
 - Estimate task size before dispatch and decompose work that could consume one session.
 - Inspect available pane or session metadata before assigning a follow-up; never rely on the child to report its own percentage.
-- Reuse a session only for a genuinely small continuation with ample context.
-- Prefer a fresh session with a concise task-local handoff for a substantial new role, seam, batch, or validation pass.
+- Reuse an idle session under its context limit for follow-ups in its own workstream, including substantial ones; it already holds the context.
+- Use a fresh session with a concise task-local handoff for an unrelated role, an independent review, or when the owner is past its limit.
 - For Pi, use `/tree` when exact earlier-session continuity is necessary. Use `/compact` only when Jorge explicitly requests it or a fresh task-local handoff cannot preserve required continuity. Do not send Pi commands to Claude Code.
 
-Measure context in tokens, not percent; these thresholds hold on 1M-context models too. Do not assign substantial new work to a session near 128k tokens. Treat 180k as unavailable for further substantive work, not as a cue to compact and continue.
+Measure context as a share of the session's own window, read from its status line. Jorge's limits for assigning new work: Claude Opus (Pi or Claude Code) up to 50%; GPT sol models up to 75%. For another model, ask Jorge. Treat a session past its limit as unavailable for further substantive work, not as a cue to compact and continue.
 
 ### In-flight monitoring
 
-For tasks expected to run long, poll the child's status and context pressure while it works; do not dispatch and walk away. If context climbs past ~128k tokens with no working-copy deltas, findings-file updates, or verification output — typically a read/probe spiral — stop the child early, preserve any deltas, and re-dispatch a smaller seam with a tighter handoff. Never coax a spiraling session forward.
+For tasks expected to run long, poll the child's status and context pressure while it works; do not dispatch and walk away. If context climbs past about half the model's limit with no working-copy deltas, findings-file updates, or verification output — typically a read/probe spiral — stop the child early, preserve any deltas, and re-dispatch a smaller seam with a tighter handoff. Never coax a spiraling session forward.
 
 ## Delegation
 
