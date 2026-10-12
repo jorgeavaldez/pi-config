@@ -35,6 +35,7 @@ Treat tickets, product docs, specs, acceptance criteria, comments, plans, and ex
 - Prefer refactoring, deletion, or consolidation over additive guardrails. Prefer one canonical owner; change another file only when it directly contradicts or bypasses that owner.
 - Complete the approved seam before optional or adjacent work. Fix required discoveries that fit the seam. If a safe fix exceeds it, would be incomplete, or would entrench a systemic issue, stop and ask to rescope.
 - Report evidenced systemic issues outside the seam as follow-ups with impact, evidence, and recommended remediation.
+- When work needs Jorge's passphrase, password, login, or 2FA (for example, a locked SSH key), stop and ask him to unlock it; it takes him seconds. Don't work around it with agent forwarding, other credentials, or new keys, and don't kill agents or credential helpers that hold unlocked keys.
 - An implementation phase has at most two batches. Each batch fits one agent session and produces one independently reviewable, mergeable change. Review iterations are not batches, and neither review feedback nor deployment or production-validation gates expand the approved outcome.
 
 ## Bounded Evidence Collection
