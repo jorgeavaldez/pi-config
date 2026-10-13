@@ -6,8 +6,6 @@
     "ketch": {
       "command": "fnox",
       "args": [
-        "--config",
-        "~/.config/fnox/config.toml",
         "--no-daemon",
         "--non-interactive",
         "exec",
