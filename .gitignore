@@ -30,3 +30,6 @@ trust.json
 fff/
 crashes.json
 mcp-auth.json
+
+# Private - Combine Cloudflare Access tokens
+combine-auth/
