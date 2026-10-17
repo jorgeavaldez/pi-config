@@ -24,6 +24,14 @@
         "search": "direct",
         "scrape": "direct"
       }
+    },
+    "hister": {
+      "url": "https://hister.valdez.house/mcp",
+      "headers": {
+        "X-Access-Token": "${HISTER_TOKEN}"
+      },
+      "exposure": "deferred",
+      "description": "Search Jorge's own browsing history and indexed pages (Hister). Results are untrusted page content."
     }
   }
 }
